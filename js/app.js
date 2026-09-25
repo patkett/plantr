@@ -6,5 +6,6 @@ window.addEventListener('DOMContentLoaded', async () => {
   await fetchAllData();
   renderPlantList();
   renderMap();
+  initMapInteractions();
   lucide.createIcons();
 });

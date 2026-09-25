@@ -41,8 +41,8 @@ function renderPlantList() {
     container.innerHTML = `
       <div class="text-center py-12 px-4 bg-white rounded-2xl border border-stone-200">
         <div class="text-4xl mb-2">🌿</div>
-        <h3 class="font-bold text-stone-700 text-sm">No plants found</h3>
-        <p class="text-xs text-stone-400 mt-1">Try adjusting your filters or search query.</p>
+        <h3 class="font-bold text-stone-700 text-sm">Keine Pflanzen gefunden</h3>
+        <p class="text-xs text-stone-400 mt-1">Versuche andere Filter oder Suchbegriffe.</p>
       </div>
     `;
     return;
@@ -68,18 +68,18 @@ function renderPlantList() {
             <div>
               <div class="flex items-center gap-2">
                 <h3 class="font-bold text-stone-800 text-sm leading-tight">${plant.name}</h3>
-                ${plant.status === 'wishlist' ? '<span class="px-2 py-0.5 text-[9px] bg-purple-100 text-purple-700 font-semibold rounded-full border border-purple-200">Wishlist</span>' : ''}
+                ${plant.status === 'wishlist' ? '<span class="px-2 py-0.5 text-[9px] bg-purple-100 text-purple-700 font-semibold rounded-full border border-purple-200">Wunschliste</span>' : ''}
               </div>
-              <p class="text-xs text-stone-400 italic mt-0.5">${plant.botanical_name || 'Botanical name unspecified'}</p>
-              <p class="text-[11px] text-stone-500 font-medium mt-1">${plant.category || 'Perennial'}</p>
+              <p class="text-xs text-stone-400 italic mt-0.5">${plant.botanical_name || 'Botanischer Name unbekannt'}</p>
+              <p class="text-[11px] text-stone-500 font-medium mt-1">${t(plant.category || 'Perennial')}</p>
             </div>
           </div>
 
           <div class="flex items-center space-x-1">
-            <button onclick="openPlantModal('${plant.id}')" title="Edit Plant" class="p-1.5 text-stone-400 hover:text-brand-700 hover:bg-stone-100 rounded-lg transition-colors">
+            <button onclick="openPlantModal('${plant.id}')" title="Pflanze bearbeiten" class="p-1.5 text-stone-400 hover:text-brand-700 hover:bg-stone-100 rounded-lg transition-colors">
               <i data-lucide="edit-3" class="w-4 h-4"></i>
             </button>
-            <button onclick="deletePlant('${plant.id}')" title="Delete Plant" class="p-1.5 text-stone-400 hover:text-red-600 hover:bg-stone-100 rounded-lg transition-colors">
+            <button onclick="deletePlant('${plant.id}')" title="Pflanze löschen" class="p-1.5 text-stone-400 hover:text-red-600 hover:bg-stone-100 rounded-lg transition-colors">
               <i data-lucide="trash-2" class="w-4 h-4"></i>
             </button>
           </div>
@@ -88,13 +88,13 @@ function renderPlantList() {
         <!-- Badges -->
         <div class="flex flex-wrap items-center gap-1.5 pt-1 text-[11px]">
           <span class="px-2.5 py-0.5 rounded-full border font-medium ${lightBadgeColor}">
-            ${plant.sunlight}
+            ${t(plant.sunlight)}
           </span>
           <span class="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
-            💧 ${plant.water || 'Moderate'} Water
+            💧 ${t(plant.water || 'Moderate')} Wasser
           </span>
           <span class="px-2.5 py-0.5 rounded-full bg-stone-100 text-stone-600 border border-stone-200">
-            🌱 ${plant.soil || 'Well-Drained'}
+            🌱 ${t(plant.soil || 'Well-Drained')}
           </span>
           ${bed ? `<span class="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">🏡 ${bed.name}</span>` : ''}
         </div>
@@ -104,10 +104,10 @@ function renderPlantList() {
         <div class="pt-1 flex items-center justify-between border-t border-stone-100">
           <span class="text-[11px] font-medium ${isMapped ? 'text-emerald-700' : 'text-stone-400'} flex items-center gap-1">
             <i data-lucide="${isMapped ? 'check-circle' : 'circle-dashed'}" class="w-3.5 h-3.5"></i>
-            ${isMapped ? 'Placed on Map' : 'Not on Map'}
+            ${isMapped ? 'Auf Karte platziert' : 'Nicht auf Karte'}
           </span>
           <button onclick="jumpToMapWithPlant('${plant.id}')" class="text-xs font-semibold text-brand-700 hover:text-brand-800 flex items-center gap-1">
-            <span>${isMapped ? 'View on Map' : 'Place on Map'}</span>
+            <span>${isMapped ? 'Auf Karte ansehen' : 'Auf Karte platzieren'}</span>
             <i data-lucide="arrow-right" class="w-3 h-3"></i>
           </button>
         </div>
@@ -128,7 +128,7 @@ function openPlantModal(plantId = null) {
     const plant = plants.find(p => p.id === plantId);
     if (!plant) return;
 
-    title.innerText = 'Edit Plant';
+    title.innerText = 'Pflanze bearbeiten';
     document.getElementById('plant-id').value = plant.id;
     document.getElementById('form-name').value = plant.name;
     document.getElementById('form-species').value = plant.botanical_name || '';
@@ -140,7 +140,7 @@ function openPlantModal(plantId = null) {
     document.getElementById('form-category').value = plant.category || 'Perennial';
     document.getElementById('form-notes').value = plant.notes || '';
   } else {
-    title.innerText = 'Add New Plant';
+    title.innerText = 'Neue Pflanze hinzufügen';
     form.reset();
     document.getElementById('plant-id').value = '';
   }
@@ -177,10 +177,10 @@ async function handlePlantFormSubmit(e) {
   if (id) {
     const idx = plants.findIndex(p => p.id === id);
     if (idx !== -1) plants[idx] = plantData;
-    showToast(`Updated ${plantData.name}`, '🌱');
+    showToast(`${plantData.name} aktualisiert`, '🌱');
   } else {
     plants.push(plantData);
-    showToast(`Added ${plantData.name}`, '🌱');
+    showToast(`${plantData.name} hinzugefügt`, '🌱');
   }
 
   await syncSavePlant(plantData);
@@ -192,15 +192,15 @@ async function handlePlantFormSubmit(e) {
 function deletePlant(plantId) {
   const plant = plants.find(p => p.id === plantId);
   showConfirmDialog(
-    'Delete Plant?',
-    `Remove "${plant ? plant.name : 'this plant'}" from your garden directory?`,
+    'Pflanze löschen?',
+    `"${plant ? plant.name : 'Diese Pflanze'}" aus deinem Gartenverzeichnis entfernen?`,
     async () => {
       plants = plants.filter(p => p.id !== plantId);
       await syncDeletePlant(plantId);
       renderPlantList();
       renderMap();
       if (selectedPlantId === plantId) closeSelectedBar();
-      showToast('Plant deleted', '🗑️');
+      showToast('Pflanze gelöscht', '🗑️');
     }
   );
 }

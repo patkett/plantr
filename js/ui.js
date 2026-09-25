@@ -5,7 +5,7 @@ function copySqlScript() {
 
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(scriptText).then(() => {
-      showToast("SQL setup script copied to clipboard!", "📋");
+      showToast("SQL-Setup-Skript in die Zwischenablage kopiert!", "📋");
     }).catch(() => {
       fallbackCopyText(scriptText);
     });
@@ -22,9 +22,9 @@ function fallbackCopyText(text) {
   textarea.select();
   try {
     document.execCommand('copy');
-    showToast("SQL setup script copied to clipboard!", "📋");
+    showToast("SQL-Setup-Skript in die Zwischenablage kopiert!", "📋");
   } catch (err) {
-    showToast("Unable to copy automatically", "⚠️");
+    showToast("Automatisches Kopieren nicht möglich", "⚠️");
   }
   document.body.removeChild(textarea);
 }
