@@ -185,7 +185,8 @@ async function syncSavePlant(plant) {
       died_bed_sunlight: plant.died_bed_sunlight || null,
       died_at: plant.died_at || null,
       placements: plant.placements || [],
-      deaths: plant.deaths || []
+      deaths: plant.deaths || [],
+      wished_by: plant.wished_by || null
     };
 
     const { error } = await supabaseClient.from('plants').upsert(payload);

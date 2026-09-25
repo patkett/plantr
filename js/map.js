@@ -200,12 +200,13 @@ function showSelectedBar(placementId) {
   const zone = zones.find(z => z.id === placement.bed_id);
   const zoneText = zone ? zone.name : 'Kein Beet zugewiesen';
 
-  const isMismatch = zone && zone.sunlight !== plant.sunlight;
-  const mismatchWarning = isMismatch
-    ? `<span class="text-amber-300 font-bold ml-1">⚠️ Lichtkonflikt: Beet hat ${t(zone.sunlight)}</span>`
-    : '';
+  document.getElementById('selected-item-subtitle').innerText = `${zoneText} • ${t(plant.sunlight)}`;
 
-  document.getElementById('selected-item-subtitle').innerHTML = `${zoneText} • ${t(plant.sunlight)}${mismatchWarning}`;
+  // Light conflict gets its own line so it is never truncated
+  const conflictEl = document.getElementById('selected-item-conflict');
+  const isMismatch = zone && zone.sunlight !== plant.sunlight;
+  conflictEl.innerText = isMismatch ? `⚠️ Lichtkonflikt: Beet hat ${t(zone.sunlight)}, Pflanze braucht ${t(plant.sunlight)}` : '';
+  conflictEl.classList.toggle('hidden', !isMismatch);
 
   const unmapBtn = document.getElementById('btn-unmap-item');
   unmapBtn.onclick = () => unmapPlacement(placementId);
