@@ -28,7 +28,6 @@ function renderPlantList() {
 
   const filtered = plants.filter(plant => {
     const matchesSearch = plant.name.toLowerCase().includes(searchTerm) ||
-                          (plant.botanical_name && plant.botanical_name.toLowerCase().includes(searchTerm)) ||
                           (plant.category && plant.category.toLowerCase().includes(searchTerm));
 
     const matchesStatus = statusFilter === 'all' || plant.status === statusFilter;
@@ -70,7 +69,6 @@ function renderPlantList() {
                 <h3 class="font-bold text-stone-800 text-sm leading-tight">${plant.name}</h3>
                 ${plant.status === 'wishlist' ? '<span class="px-2 py-0.5 text-[9px] bg-purple-100 text-purple-700 font-semibold rounded-full border border-purple-200">Wunschliste</span>' : ''}
               </div>
-              <p class="text-xs text-stone-400 italic mt-0.5">${plant.botanical_name || 'Botanischer Name unbekannt'}</p>
               <p class="text-[11px] text-stone-500 font-medium mt-1">${t(plant.category || 'Perennial')}</p>
             </div>
           </div>
@@ -131,7 +129,6 @@ function openPlantModal(plantId = null) {
     title.innerText = 'Pflanze bearbeiten';
     document.getElementById('plant-id').value = plant.id;
     document.getElementById('form-name').value = plant.name;
-    document.getElementById('form-species').value = plant.botanical_name || '';
     document.getElementById('form-emoji').value = plant.emoji || '🪴';
     document.getElementById('form-status').value = plant.status || 'garden';
     document.getElementById('form-sunlight').value = plant.sunlight || 'Full Sun';
@@ -161,7 +158,7 @@ async function handlePlantFormSubmit(e) {
   const plantData = {
     id: id || 'p_' + Date.now(),
     name: document.getElementById('form-name').value,
-    botanical_name: document.getElementById('form-species').value,
+    botanical_name: editingPlantId ? (plants.find(p => p.id === editingPlantId)?.botanical_name ?? null) : null,
     emoji: document.getElementById('form-emoji').value || '🪴',
     status: document.getElementById('form-status').value,
     sunlight: document.getElementById('form-sunlight').value,
