@@ -1,49 +1,118 @@
-/* Verdant - Garden Planner custom styles (layered on top of Tailwind CSS) */
+/* Verdant - Garden Planner custom styles (layered on top of Tailwind CSS)
+   Look: "ligne claire" (Hergé) – uniform black outlines, flat colours,
+   no gradients, blur or soft shadows. Hard offset shadows only. */
+
+:root {
+  --ink: #1a1a1a;
+  --paper: #f7f0dc;
+  --sky: #9fd8ea;
+  --sand: #e6c88f;
+  --leaf: #6fae4c;
+  --leaf-dark: #33592b;
+  --coral: #e2573c;
+  --sun: #f4d052;
+  --shade: #a9bcc9;
+}
 
 body {
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
   user-select: none;
+  background: var(--paper);
+  color: var(--ink);
+  font-weight: 600;
 }
 
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-.no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+h1, h2, h3, h4, .font-serif {
+  font-family: 'Fredoka', sans-serif;
+  letter-spacing: 0.01em;
 }
 
-.grid-pattern {
+/* Bolder icon strokes to match the line weight */
+svg.lucide { stroke-width: 2.5; }
+
+/* --- OUTLINES: every rounded box gets an ink contour ------------------- */
+[class*="rounded-3xl"],
+[class*="rounded-2xl"],
+[class*="rounded-xl"],
+[class*="rounded-lg"],
+[class*="rounded-full"] {
+  border-width: 2px !important;
+  border-style: solid !important;
+  border-color: var(--ink) !important;
+}
+[class*="border-"] { border-color: var(--ink) !important; }
+
+/* Flat colours: no translucency, no blur, no gradients */
+[class*="bg-stone-900/"], [class*="bg-stone-800/"] { background-color: var(--ink) !important; }
+[class*="bg-white/"] { background-color: #fff !important; }
+[class*="bg-brand-700/"] { background-color: #fff !important; color: var(--leaf-dark) !important; }
+[class*="backdrop-blur"] { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+[class*="bg-gradient-to-b"] { background: none !important; }
+
+/* Hard offset shadows instead of soft ones */
+[class*="shadow-xs"], [class*="shadow-sm"] { box-shadow: 2px 2px 0 var(--ink) !important; }
+[class*="shadow-md"], [class*="shadow-lg"], [class*="shadow-xl"], [class*="shadow-2xl"] { box-shadow: 4px 4px 0 var(--ink) !important; }
+.hover\:shadow-md:hover { box-shadow: 4px 4px 0 var(--ink) !important; }
+button[class*="shadow"]:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink) !important; }
+
+/* Focus: sky-blue halo with ink edge */
+input:focus, select:focus, textarea:focus, button:focus-visible {
+  outline: none !important;
+  box-shadow: 0 0 0 3px var(--sky) !important;
+}
+[class*="ring-2"] { --tw-ring-color: var(--coral) !important; }
+
+/* --- HEADER & NAV ------------------------------------------------------ */
+header {
+  background: var(--sky) !important;
+  color: var(--ink) !important;
+  border-bottom: 3px solid var(--ink);
+  box-shadow: none !important;
+}
+header h1, header .text-white, header p { color: var(--ink) !important; }
+#btn-open-add-modal { background: var(--coral) !important; color: #fff !important; }
+#btn-open-add-modal:hover { background: #c4432c !important; }
+#btn-user-chip { background-color: #fff; background-repeat: no-repeat; }
+
+nav {
+  border-top: 3px solid var(--ink) !important;
+  background: #fff !important;
+  box-shadow: none !important;
+}
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* --- MAP --------------------------------------------------------------- */
+/* Surroundings: flat lawn green, the garden itself: sand path with a fine grid */
+.grid-pattern { background-color: var(--leaf); }
+#garden-canvas {
+  border: 3px solid var(--ink) !important;
+  background-color: var(--sand) !important;
   background-size: 24px 24px;
   background-image:
-    linear-gradient(to right, rgba(0, 0, 0, 0.04) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(0, 0, 0, 0.04) 1px, transparent 1px);
+    linear-gradient(to right, rgba(26, 26, 26, 0.08) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(26, 26, 26, 0.08) 1px, transparent 1px);
 }
 
-.zone-pattern-sun {
-  background: radial-gradient(circle, rgba(254, 240, 138, 0.45) 0%, rgba(254, 240, 138, 0.15) 100%);
-  border: 2px dashed #eab308;
-}
+/* Inside ink-coloured bars/toasts the contour is cream so it stays visible */
+.bg-stone-900 [class*="rounded"], #verdant-toast { border-color: var(--paper) !important; }
+.bg-stone-900 [class*="shadow"] { box-shadow: none !important; }
 
-.zone-pattern-partial {
-  background: radial-gradient(circle, rgba(254, 215, 170, 0.45) 0%, rgba(254, 215, 170, 0.15) 100%);
-  border: 2px dashed #f97316;
-}
-
-.zone-pattern-shade {
-  background: radial-gradient(circle, rgba(203, 213, 225, 0.5) 0%, rgba(203, 213, 225, 0.18) 100%);
-  border: 2px dashed #64748b;
-}
+.zone-pattern-sun     { background: var(--sun);   border: 3px solid var(--ink) !important; }
+.zone-pattern-partial { background: #e9903a;      border: 3px solid var(--ink) !important; }
+.zone-pattern-shade   { background: var(--shade); border: 3px solid var(--ink) !important; }
+.zone-editing { box-shadow: 4px 4px 0 var(--ink) !important; }
 
 @keyframes pulse-ring {
-  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(76, 135, 114, 0.7); }
-  70% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(76, 135, 114, 0); }
-  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(76, 135, 114, 0); }
+  0%   { transform: scale(0.96); }
+  50%  { transform: scale(1.08); }
+  100% { transform: scale(0.96); }
 }
-
 .marker-active {
-  animation: pulse-ring 2s infinite;
+  animation: pulse-ring 1.6s infinite;
+  background: var(--sun) !important;
 }
 
 /* Let JS fully own gesture handling here so custom drag/pan/pinch-zoom
@@ -55,7 +124,8 @@ body {
   touch-action: none;
 }
 
-/* User select: illustration split into two tappable halves */
+/* --- USER SELECT --------------------------------------------------------- */
 .user-half { background: transparent; }
-.user-half:focus-visible { outline: none; }
-#btn-user-chip { background-repeat: no-repeat; }
+.user-half:focus-visible { outline: none; box-shadow: none !important; }
+.user-half span { box-shadow: 3px 3px 0 var(--ink); }
+.user-half-last span { background: var(--sun) !important; }
