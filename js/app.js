@@ -8,4 +8,5 @@ window.addEventListener('DOMContentLoaded', async () => {
   renderMap();
   initMapInteractions();
   lucide.createIcons();
+  showUserSelect();
 });

@@ -77,7 +77,7 @@ function renderPlantList() {
             <div>
               <div class="flex items-center gap-2">
                 <h3 class="font-bold text-stone-800 text-sm leading-tight">${plant.name}</h3>
-                ${plant.status === 'wishlist' ? '<span class="px-2 py-0.5 text-[9px] bg-purple-100 text-purple-700 font-semibold rounded-full border border-purple-200">Wunschliste</span>' : ''}
+                ${plant.status === 'wishlist' ? `<span class="px-2 py-0.5 text-[9px] bg-purple-100 text-purple-700 font-semibold rounded-full border border-purple-200">Wunschliste</span>${plant.wished_by ? `<span class="px-2 py-0.5 text-[9px] ${plant.wished_by === 'Sandra' ? 'bg-rose-100 text-rose-700 border-rose-200' : 'bg-sky-100 text-sky-700 border-sky-200'} font-semibold rounded-full border">${plant.wished_by}</span>` : ''}` : ''}
                 ${isDeceased ? '<span class="px-2 py-0.5 text-[9px] bg-stone-200 text-stone-700 font-semibold rounded-full border border-stone-300">🪦 Verstorben</span>' : ''}
               </div>
               <p class="text-[11px] text-stone-500 font-medium mt-1">${t(plant.category || 'Perennial')}</p>
@@ -115,7 +115,7 @@ function renderPlantList() {
         ${isDeceased ? '' : isWishlist ? `<div class="pt-1 flex items-center justify-between border-t border-stone-100">
           <span class="text-[11px] font-medium text-stone-400 flex items-center gap-1">
             <i data-lucide="shopping-cart" class="w-3.5 h-3.5"></i>
-            Wunschliste – noch nicht im Garten
+            Wunschliste${plant.wished_by ? ` von ${plant.wished_by}` : ''} – noch nicht im Garten
           </span>
         </div>` : `<div class="pt-1 flex items-center justify-between border-t border-stone-100">
           <span class="text-[11px] font-medium ${isMapped ? 'text-emerald-700' : 'text-stone-400'} flex items-center gap-1">
@@ -261,8 +261,14 @@ async function handlePlantFormSubmit(e) {
     deaths: existing ? [...(existing.deaths || [])] : [],
     died_in_bed: existing ? existing.died_in_bed || null : null,
     died_bed_sunlight: existing ? existing.died_bed_sunlight || null : null,
-    died_at: existing ? existing.died_at || null : null
+    died_at: existing ? existing.died_at || null : null,
+    wished_by: existing ? existing.wished_by || null : null
   };
+
+  // Attribute the wish to whoever is using the app when it (newly) lands on the wishlist
+  if (plantData.status === 'wishlist' && (!existing || existing.status !== 'wishlist' || !plantData.wished_by)) {
+    plantData.wished_by = currentUser || plantData.wished_by;
+  }
 
   let removedFromMap = 0;
   if (plantData.status === 'deceased') {

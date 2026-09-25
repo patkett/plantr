@@ -35,7 +35,8 @@ CREATE TABLE IF NOT EXISTS public.plants (
   died_bed_sunlight TEXT,
   died_at TIMESTAMPTZ,
   placements JSONB DEFAULT '[]'::jsonb,
-  deaths JSONB DEFAULT '[]'::jsonb
+  deaths JSONB DEFAULT '[]'::jsonb,
+  wished_by TEXT
 );
 
 -- 2b. Migration for existing databases: add columns used to record
@@ -50,6 +51,9 @@ ALTER TABLE public.plants ADD COLUMN IF NOT EXISTS died_at TIMESTAMPTZ;
 --     Legacy x_pos/y_pos/bed_id are kept and mirror the first placement.
 ALTER TABLE public.plants ADD COLUMN IF NOT EXISTS placements JSONB DEFAULT '[]'::jsonb;
 ALTER TABLE public.plants ADD COLUMN IF NOT EXISTS deaths JSONB DEFAULT '[]'::jsonb;
+
+-- 2d. Migration: who (Sandra/Patrick) put a plant on the wishlist.
+ALTER TABLE public.plants ADD COLUMN IF NOT EXISTS wished_by TEXT;
 NOTIFY pgrst, 'reload schema';
 
 -- 3. Enable RLS and create public read/write policies
