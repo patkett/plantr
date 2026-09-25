@@ -30,14 +30,14 @@ function renderMap() {
             ${zone.name}
           </span>
           <div class="relative">
-            <button onclick="toggleZoneMenu(event, '${zone.id}')" class="p-1 bg-white/80 rounded-md text-stone-500 hover:text-brand-700 shadow-xs">
-              <i data-lucide="pencil" class="w-3 h-3"></i>
+            <button onclick="toggleZoneMenu(event, '${zone.id}')" title="Beet bearbeiten" class="p-2 bg-white/90 rounded-lg text-stone-600 hover:text-brand-700 shadow-sm border border-stone-200/60 active:scale-95">
+              <i data-lucide="pencil" class="w-4 h-4"></i>
             </button>
-            <div id="zone-menu-${zone.id}" class="hidden absolute right-0 top-7 z-40 bg-white rounded-xl shadow-lg border border-stone-200 overflow-hidden w-40">
-              <button onclick="startZoneResizeMode(event, '${zone.id}')" class="w-full text-left px-3 py-2 text-xs font-medium text-stone-700 hover:bg-stone-100 flex items-center gap-2">
+            <div id="zone-menu-${zone.id}" class="hidden absolute right-0 top-10 z-40 bg-white rounded-xl shadow-lg border border-stone-200 overflow-hidden w-40">
+              <button onclick="startZoneResizeMode(event, '${zone.id}')" class="w-full text-left px-3 py-3 text-xs font-medium text-stone-700 hover:bg-stone-100 flex items-center gap-2">
                 <i data-lucide="move-diagonal-2" class="w-3.5 h-3.5"></i> Größe ändern
               </button>
-              <button onclick="confirmDeleteZone(event, '${zone.id}')" class="w-full text-left px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-50 flex items-center gap-2 border-t border-stone-100">
+              <button onclick="confirmDeleteZone(event, '${zone.id}')" class="w-full text-left px-3 py-3 text-xs font-medium text-red-600 hover:bg-red-50 flex items-center gap-2 border-t border-stone-100">
                 <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Löschen
               </button>
             </div>
@@ -47,7 +47,7 @@ function renderMap() {
           ${t(zone.sunlight)}-Beet
         </div>
         ${zone.id === resizingZoneId ? `
-          <div class="zone-resize-handle absolute bottom-1.5 right-1.5 w-6 h-6 bg-brand-700 rounded-lg shadow-md cursor-se-resize flex items-center justify-center z-40"
+          <div class="zone-resize-handle absolute bottom-1.5 right-1.5 w-9 h-9 bg-brand-700 rounded-lg shadow-md cursor-se-resize flex items-center justify-center z-40"
                onmousedown="startZoneResize(event, '${zone.id}')"
                ontouchstart="startZoneResize(event, '${zone.id}')"
                title="Ziehen zum Ändern der Größe">
@@ -72,7 +72,7 @@ function renderMap() {
            onmousedown="startMarkerDrag(event, '${plant.id}')"
            ontouchstart="startMarkerDrag(event, '${plant.id}')"
            onclick="selectPlantMarker('${plant.id}')"
-           class="absolute -translate-x-1/2 -translate-y-1/2 cursor-grab active:cursor-grabbing z-20 group">
+           class="absolute -translate-x-1/2 -translate-y-1/2 cursor-grab active:cursor-grabbing z-20 group pointer-events-auto">
 
         <div class="relative flex flex-col items-center">
           ${hasSunMismatch ? `
@@ -365,7 +365,6 @@ async function stopZoneResize() {
     if (zone) await syncSaveZone(zone);
   }
   activeResizeZoneId = null;
-  resizingZoneId = null;
 
   window.removeEventListener('mousemove', onZoneResize);
   window.removeEventListener('touchmove', onZoneResize);
@@ -614,5 +613,11 @@ function initMapInteractions() {
 
   viewport.addEventListener('wheel', handleViewportWheel, { passive: false });
 
-  document.addEventListener('click', () => closeAllZoneMenus());
+  document.addEventListener('click', (e) => {
+    closeAllZoneMenus();
+    if (resizingZoneId && !e.target.closest('.zone-resize-handle')) {
+      resizingZoneId = null;
+      renderMap();
+    }
+  });
 }
