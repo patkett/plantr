@@ -26,11 +26,31 @@ function renderUserChip() {
   chip.title = currentUser ? `Angemeldet als ${currentUser} – tippen zum Wechseln` : 'Nutzer wählen';
 }
 
+const DB_ADMIN_USER = 'Patrick';
+
+function canOpenDbSettings() {
+  return currentUser === DB_ADMIN_USER;
+}
+
+// The app icon keeps showing the connection dot for everyone,
+// but only Patrick can open the Supabase settings page behind it.
+function openDbSettings() {
+  if (!canOpenDbSettings()) return;
+  switchTab('db');
+}
+
 function setCurrentUser(name) {
   currentUser = name;
   localStorage.setItem(USER_STORAGE_KEY, name);
   renderUserChip();
   document.getElementById('user-select-overlay').classList.add('hidden');
+  const btn = document.getElementById('btn-header-db-status');
+  if (btn) {
+    btn.title = canOpenDbSettings() ? 'Datenbank-Einstellungen' : 'Verdant';
+    btn.classList.toggle('cursor-default', !canOpenDbSettings());
+  }
+  // Leave the settings page if the new user may not see it
+  if (!canOpenDbSettings() && !document.getElementById('view-db').classList.contains('hidden')) switchTab('directory');
 }
 
 // Shown on every app start: the illustration is split into two tappable halves.
