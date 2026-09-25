@@ -177,7 +177,10 @@ async function syncSavePlant(plant) {
       emoji: plant.emoji,
       bed_id: plant.bed_id,
       x_pos: plant.x_pos,
-      y_pos: plant.y_pos
+      y_pos: plant.y_pos,
+      died_in_bed: plant.died_in_bed || null,
+      died_bed_sunlight: plant.died_bed_sunlight || null,
+      died_at: plant.died_at || null
     };
 
     const { error } = await supabaseClient.from('plants').upsert(payload);

@@ -45,13 +45,14 @@ function showToast(message, icon = '🌿') {
   }, 2500);
 }
 
-function showConfirmDialog(title, message, onConfirm) {
+function showConfirmDialog(title, message, onConfirm, okLabel = 'Löschen') {
   const modal = document.getElementById('modal-confirm');
   document.getElementById('confirm-title').innerText = title;
   document.getElementById('confirm-message').innerText = message;
 
   const cancelBtn = document.getElementById('btn-confirm-cancel');
   const okBtn = document.getElementById('btn-confirm-ok');
+  okBtn.innerText = okLabel;
 
   const cleanup = () => {
     modal.classList.add('hidden');

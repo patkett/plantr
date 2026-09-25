@@ -24,7 +24,8 @@ function renderMap() {
     return `
       <div id="zone-${zone.id}"
            style="left: ${zone.x}px; top: ${zone.y}px; width: ${width}px; height: ${height}px;"
-           class="absolute rounded-2xl ${zoneClass} p-3 flex flex-col justify-between transition-all">
+           ${zone.id === resizingZoneId ? `onmousedown="startZoneMove(event, '${zone.id}')" ontouchstart="startZoneMove(event, '${zone.id}')"` : ''}
+           class="absolute rounded-2xl ${zoneClass} p-3 flex flex-col justify-between ${zone.id === resizingZoneId ? 'zone-editing cursor-move ring-2 ring-brand-500 ring-offset-2 ring-offset-transparent shadow-lg' : 'transition-all'}">
         <div class="flex items-center justify-between">
           <span class="text-xs font-bold text-stone-700 bg-white/80 backdrop-blur px-2.5 py-1 rounded-lg shadow-xs border border-stone-200/60">
             ${zone.name}
@@ -213,6 +214,8 @@ function showSelectedBar(plantId) {
 
   const unmapBtn = document.getElementById('btn-unmap-item');
   unmapBtn.onclick = () => unmapPlant(plantId);
+  const deceasedBtn = document.getElementById('btn-deceased-item');
+  if (deceasedBtn) deceasedBtn.onclick = () => confirmMarkDeceased(plantId);
 
   bar.classList.remove('hidden');
 }
@@ -342,7 +345,96 @@ function startZoneResizeMode(e, zoneId) {
   closeZoneBar(false); // give the map maximum space while resizing
   resizingZoneId = zoneId;
   renderMap();
-  showToast('Ziehe die Ecke unten rechts, um die Größe zu ändern', '📐');
+  showToast('Beet ziehen zum Verschieben, Ecke unten rechts zum Skalieren', '📐');
+}
+
+// --- BED MOVE DRAG LOGIC (whole bed incl. its plants, only in edit mode) ---
+let movingZoneId = null;
+let moveStartX = 0, moveStartY = 0;
+let moveZoneStartX = 0, moveZoneStartY = 0;
+let movePlantStarts = [];
+
+function startZoneMove(e, zoneId) {
+  if (e.target.closest('.zone-resize-handle') || e.target.closest('button')) return;
+  if (e.touches && e.touches.length > 1) return;
+  e.stopPropagation();
+  if (e.cancelable) e.preventDefault();
+
+  const zone = zones.find(z => z.id === zoneId);
+  if (!zone) return;
+
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+  const point = getCanvasPoint(clientX, clientY);
+
+  movingZoneId = zoneId;
+  moveStartX = point.x;
+  moveStartY = point.y;
+  moveZoneStartX = zone.x;
+  moveZoneStartY = zone.y;
+  movePlantStarts = plants
+    .filter(p => p.bed_id === zoneId && p.x_pos !== null && p.y_pos !== null)
+    .map(p => ({ plant: p, x: p.x_pos, y: p.y_pos }));
+
+  window.addEventListener('mousemove', onZoneMove);
+  window.addEventListener('touchmove', onZoneMove, { passive: false });
+  window.addEventListener('mouseup', stopZoneMove);
+  window.addEventListener('touchend', stopZoneMove);
+}
+
+function onZoneMove(e) {
+  if (!movingZoneId) return;
+  if (e.cancelable) e.preventDefault();
+  const zone = zones.find(z => z.id === movingZoneId);
+  if (!zone) return;
+
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+  const point = getCanvasPoint(clientX, clientY);
+
+  const w = zone.width || zone.w || 300;
+  const h = zone.height || zone.h || 200;
+  const newX = Math.max(0, Math.min(900 - w, Math.round(moveZoneStartX + (point.x - moveStartX))));
+  const newY = Math.max(0, Math.min(650 - h, Math.round(moveZoneStartY + (point.y - moveStartY))));
+  const dx = newX - zone.x;
+  const dy = newY - zone.y;
+  zone.x = newX;
+  zone.y = newY;
+
+  const zoneEl = document.getElementById(`zone-${zone.id}`);
+  if (zoneEl) {
+    zoneEl.style.left = `${newX}px`;
+    zoneEl.style.top = `${newY}px`;
+  }
+
+  // Plants placed in this bed travel with it
+  movePlantStarts.forEach(({ plant }) => {
+    plant.x_pos += dx;
+    plant.y_pos += dy;
+    const el = document.getElementById(`marker-${plant.id}`);
+    if (el) {
+      el.style.left = `${plant.x_pos}px`;
+      el.style.top = `${plant.y_pos}px`;
+    }
+  });
+}
+
+async function stopZoneMove() {
+  window.removeEventListener('mousemove', onZoneMove);
+  window.removeEventListener('touchmove', onZoneMove);
+  window.removeEventListener('mouseup', stopZoneMove);
+  window.removeEventListener('touchend', stopZoneMove);
+  if (!movingZoneId) return;
+
+  const zone = zones.find(z => z.id === movingZoneId);
+  const moved = zone && (zone.x !== moveZoneStartX || zone.y !== moveZoneStartY);
+  movingZoneId = null;
+  if (zone && moved) {
+    await syncSaveZone(zone);
+    for (const { plant } of movePlantStarts) await syncSavePlant(plant);
+  }
+  movePlantStarts = [];
+  renderMap();
 }
 
 // --- BED RESIZE DRAG LOGIC ---
@@ -482,7 +574,7 @@ function openUnplacedDrawer() {
   const drawer = document.getElementById('drawer-unplaced');
   const list = document.getElementById('unplaced-list');
 
-  const unplaced = plants.filter(p => p.x_pos === null || p.y_pos === null);
+  const unplaced = plants.filter(p => p.status !== 'deceased' && (p.x_pos === null || p.y_pos === null));
 
   if (unplaced.length === 0) {
     list.innerHTML = `
@@ -559,6 +651,7 @@ function isInteractiveMapTarget(target) {
   return !!(
     target.closest('[data-plant-id]') ||
     target.closest('.zone-resize-handle') ||
+    target.closest('.zone-editing') ||
     target.closest('#map-selected-bar') ||
     target.closest('#map-zone-bar') ||
     target.closest('button')
@@ -568,7 +661,7 @@ function isInteractiveMapTarget(target) {
 function startMapPan(e) {
   if (e.button !== undefined && e.button !== 0) return;
   if (isInteractiveMapTarget(e.target)) return;
-  if (draggingPlantId || activeResizeZoneId) return;
+  if (draggingPlantId || activeResizeZoneId || movingZoneId) return;
 
   isPanning = true;
   const viewport = document.getElementById('map-viewport');
