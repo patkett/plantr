@@ -159,9 +159,12 @@ function onMarkerDrag(e) {
 
 async function stopMarkerDrag() {
   if (draggingPlacementId) {
-    const found = findPlacement(draggingPlacementId);
-    if (found) await syncSavePlant(found.plant);
+    const released = draggingPlacementId;
     draggingPlacementId = null;
+    // Refresh bed / light-conflict info immediately on release, before the (async) save
+    if (selectedPlacementId === released) showSelectedBar(released);
+    const found = findPlacement(released);
+    if (found) await syncSavePlant(found.plant);
   }
   window.removeEventListener('mousemove', onMarkerDrag);
   window.removeEventListener('touchmove', onMarkerDrag);
@@ -238,15 +241,14 @@ async function unmapPlacement(placementId) {
 function jumpToMapWithPlant(plantId) {
   const plant = plants.find(p => p.id === plantId);
   if (!plant) return;
-  if (!isPlaceable(plant)) {
-    showToast('Wunschlisten-Pflanzen können nicht auf der Karte platziert werden', '🛒');
-    return;
-  }
+  if (!isPlaceable(plant)) return;
   switchTab('map');
   if (placementCount(plant) === 0) {
+    const promoted = promoteToGarden(plant);
     addPlacement(plant);
     syncSavePlant(plant);
     renderPlantList();
+    if (promoted) showToast(`${plant.name} ist jetzt im Garten (von der Wunschliste)`, '🌱');
   }
   selectPlantMarker(plant.placements[0].id);
 }
@@ -572,7 +574,7 @@ function openUnplacedDrawer() {
   const drawer = document.getElementById('drawer-unplaced');
   const list = document.getElementById('unplaced-list');
 
-  // Wishlist and deceased plants cannot be placed; garden plants can be placed several times.
+  // Deceased plants cannot be placed; wishlist plants move into the garden when placed.
   const placeable = plants
     .filter(isPlaceable)
     .sort((a, b) => placementCount(a) - placementCount(b) || a.name.localeCompare(b.name, 'de'));
@@ -580,7 +582,7 @@ function openUnplacedDrawer() {
   if (placeable.length === 0) {
     list.innerHTML = `
       <div class="text-center py-6 text-xs text-stone-500">
-        Keine Gartenpflanzen vorhanden. Wunschlisten-Pflanzen lassen sich nicht platzieren.
+        Keine Pflanzen vorhanden.
       </div>
     `;
   } else {
@@ -592,7 +594,7 @@ function openUnplacedDrawer() {
           <span class="text-2xl">${p.emoji || '🪴'}</span>
           <div>
             <h4 class="font-bold text-xs text-stone-800">${p.name}</h4>
-            <span class="text-[10px] text-stone-500">${t(p.sunlight)} • ${t(p.category || 'Perennial')}${n > 0 ? ` • <span class="text-emerald-700 font-semibold">${n}× auf Karte</span>` : ''}</span>
+            <span class="text-[10px] text-stone-500">${t(p.sunlight)} • ${t(p.category || 'Perennial')}${n > 0 ? ` • <span class="text-emerald-700 font-semibold">${n}× auf Karte</span>` : ''}${p.status === 'wishlist' ? ' • <span class="text-purple-700 font-semibold">Wunschliste</span>' : ''}</span>
           </div>
         </div>
         <button onclick="placePlantOnMap('${p.id}')" class="px-3 py-1.5 bg-brand-700 text-white text-xs font-semibold rounded-lg shadow-xs hover:bg-brand-800 transition-colors whitespace-nowrap">
@@ -614,6 +616,7 @@ function closeUnplacedDrawer() {
 async function placePlantOnMap(plantId) {
   const plant = plants.find(p => p.id === plantId);
   if (!plant || !isPlaceable(plant)) return;
+  const promoted = promoteToGarden(plant);
   const offset = (plant.placements || []).filter(pl => Math.abs(pl.x - MAP_CENTER.x) < 60 && Math.abs(pl.y - MAP_CENTER.y) < 60).length;
   const placement = addPlacement(plant, MAP_CENTER.x + offset * 30, MAP_CENTER.y + offset * 30);
   await syncSavePlant(plant);
@@ -623,7 +626,7 @@ async function placePlantOnMap(plantId) {
   renderPlantList();
   selectPlantMarker(placement.id);
   const n = placementCount(plant);
-  showToast(n > 1 ? `${plant.name} erneut platziert (${n}× auf der Karte)` : `${plant.name} auf der Karte platziert`, '📍');
+  showToast(promoted ? `${plant.name} ist jetzt im Garten (von der Wunschliste)` : n > 1 ? `${plant.name} erneut platziert (${n}× auf der Karte)` : `${plant.name} auf der Karte platziert`, promoted ? '🌱' : '📍');
 }
 
 // --- MAP PANNING (click/single-finger-drag on empty canvas space) ---

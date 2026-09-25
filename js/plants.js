@@ -108,15 +108,19 @@ function renderPlantList() {
           ${bedNames.map(n => `<span class="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">🏡 ${n}</span>`).join('')}
         </div>
 
+        ${plant.notes ? `<p class="text-xs text-stone-600 bg-stone-50 p-2.5 rounded-xl border border-stone-200/60 leading-relaxed">${plant.notes}</p>` : ''}
         ${isDeceased ? `<p class="text-xs text-stone-600 bg-stone-100 p-2.5 rounded-xl border border-stone-200 leading-relaxed">🪦 Verstorben${plant.died_in_bed ? ` im Beet <strong>${plant.died_in_bed}</strong>` : ''}${plant.died_bed_sunlight ? ` (${t(plant.died_bed_sunlight)})` : ''}${diedDate ? ` am ${diedDate}` : ''}${deaths.length > 1 ? `<br><span class="text-stone-500">Frühere Exemplare: ${deaths.slice(0, -1).map(fmtDeath).join('; ')}</span>` : ''}</p>` : ''}
         ${historyHtml}
-        ${plant.notes ? `<p class="text-xs text-stone-600 bg-stone-50 p-2.5 rounded-xl border border-stone-200/60 leading-relaxed">${plant.notes}</p>` : ''}
 
         ${isDeceased ? '' : isWishlist ? `<div class="pt-1 flex items-center justify-between border-t border-stone-100">
           <span class="text-[11px] font-medium text-stone-400 flex items-center gap-1">
             <i data-lucide="shopping-cart" class="w-3.5 h-3.5"></i>
-            Wunschliste${plant.wished_by ? ` von ${plant.wished_by}` : ''} – noch nicht im Garten
+            Wunschliste${plant.wished_by ? ` von ${plant.wished_by}` : ''}
           </span>
+          <button onclick="jumpToMapWithPlant('${plant.id}')" title="Platzieren und in den Garten übernehmen" class="text-xs font-semibold text-brand-700 hover:text-brand-800 flex items-center gap-1">
+            <span>Auf Karte platzieren</span>
+            <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+          </button>
         </div>` : `<div class="pt-1 flex items-center justify-between border-t border-stone-100">
           <span class="text-[11px] font-medium ${isMapped ? 'text-emerald-700' : 'text-stone-400'} flex items-center gap-1">
             <i data-lucide="${isMapped ? 'check-circle' : 'circle-dashed'}" class="w-3.5 h-3.5"></i>

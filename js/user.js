@@ -40,7 +40,7 @@ function showUserSelect() {
   const container = document.getElementById('user-select-buttons');
   container.innerHTML = USERS.map(u => `
     <button onclick="setCurrentUser('${u}')" class="user-half group relative flex-1 flex items-end justify-center pb-5 transition-all active:scale-[0.98] ${u === last ? 'user-half-last' : ''}" aria-label="${u}">
-      <span class="px-5 py-2 rounded-full bg-white/90 text-stone-900 font-bold text-base shadow-lg border-2 ${u === last ? 'border-brand-600' : 'border-transparent'} group-hover:border-brand-500 transition-colors">${u}</span>
+      <span class="px-5 py-2 rounded-full bg-white/90 text-stone-900 font-bold text-base shadow-lg border-2 ${u === last ? 'border-brand-600' : 'border-transparent'} group-hover:border-brand-500 group-hover:scale-105 transition-all">${u}</span>
     </button>`).join('');
   overlay.classList.remove('hidden');
 }
