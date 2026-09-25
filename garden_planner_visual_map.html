@@ -1,0 +1,1473 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-stone-50">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Verdant - Garden Planner & Supabase Database</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Supabase JS Client v2 CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
+  <!-- Google Fonts: Inter & Playfair Display -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,600;1,400&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f2f7f4',
+              100: '#e1ede6',
+              200: '#c5dcd0',
+              300: '#9cc2b1',
+              400: '#6ea38f',
+              500: '#4c8772',
+              600: '#396c5b',
+              700: '#2f574a',
+              800: '#28473e',
+              900: '#233c35',
+            },
+            terracotta: {
+              500: '#e06d53',
+              600: '#c8563c'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            serif: ['Playfair Display', 'serif']
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+    .grid-pattern {
+      background-size: 24px 24px;
+      background-image: 
+        linear-gradient(to right, rgba(0, 0, 0, 0.04) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(0, 0, 0, 0.04) 1px, transparent 1px);
+    }
+
+    .zone-pattern-sun {
+      background: radial-gradient(circle, rgba(254, 240, 138, 0.45) 0%, rgba(254, 240, 138, 0.15) 100%);
+      border: 2px dashed #eab308;
+    }
+
+    .zone-pattern-partial {
+      background: radial-gradient(circle, rgba(254, 215, 170, 0.45) 0%, rgba(254, 215, 170, 0.15) 100%);
+      border: 2px dashed #f97316;
+    }
+
+    .zone-pattern-shade {
+      background: radial-gradient(circle, rgba(203, 213, 225, 0.5) 0%, rgba(203, 213, 225, 0.18) 100%);
+      border: 2px dashed #64748b;
+    }
+
+    @keyframes pulse-ring {
+      0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(76, 135, 114, 0.7); }
+      70% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(76, 135, 114, 0); }
+      100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(76, 135, 114, 0); }
+    }
+
+    .marker-active {
+      animation: pulse-ring 2s infinite;
+    }
+  </style>
+</head>
+
+<body class="h-full flex flex-col font-sans text-stone-800 bg-stone-100 antialiased overflow-hidden select-none">
+
+  <header class="bg-brand-900 text-stone-100 px-4 py-3 shadow-md z-30 flex items-center justify-between shrink-0">
+    <div class="flex items-center space-x-2.5">
+      <div class="p-1.5 bg-brand-700/60 rounded-lg text-emerald-300 border border-brand-600/50">
+        <i data-lucide="sprout" class="w-6 h-6"></i>
+      </div>
+      <div>
+        <h1 class="font-serif font-bold text-lg tracking-tight leading-none text-white">Verdant</h1>
+        <p class="text-[10px] text-brand-300 font-medium tracking-wide uppercase mt-0.5">Garden Planner & Supabase DB</p>
+      </div>
+    </div>
+
+    <!-- DB Status & Quick Stats -->
+    <div class="flex items-center space-x-2 text-xs">
+      <!-- Supabase Connection Indicator Button -->
+      <button onclick="switchTab('db')" id="btn-header-db-status" class="px-2.5 py-1 bg-brand-800/80 hover:bg-brand-800 rounded-full text-stone-300 border border-brand-700/60 flex items-center gap-1.5 transition-all">
+        <span id="db-status-dot" class="w-2 h-2 rounded-full bg-amber-400"></span>
+        <span id="db-status-text" class="text-[11px] font-medium">Local Mode</span>
+      </button>
+
+      <button id="btn-open-add-modal" onclick="openPlantModal()" class="flex items-center space-x-1.5 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white text-xs font-semibold px-3 py-2 rounded-lg shadow-sm transition-all active:scale-95">
+        <i data-lucide="plus" class="w-4 h-4"></i>
+        <span class="hidden sm:inline">Add Plant</span>
+      </button>
+    </div>
+  </header>
+
+  <main class="flex-1 relative overflow-hidden flex flex-col">
+
+    <section id="view-directory" class="flex-1 flex flex-col h-full overflow-hidden bg-stone-100">
+      
+      <!-- Filters and Search Header -->
+      <div class="bg-white border-b border-stone-200 px-4 py-3 shadow-xs space-y-3 z-10 shrink-0">
+        
+        <!-- Search & Status Select -->
+        <div class="flex items-center gap-2">
+          <div class="relative flex-1">
+            <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-stone-400"></i>
+            <input type="text" id="input-search" oninput="renderPlantList()" placeholder="Search plant name, species, category..." class="w-full pl-9 pr-3 py-2 text-xs bg-stone-100 border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:bg-white transition-all">
+          </div>
+          
+          <select id="select-status-filter" onchange="renderPlantList()" class="bg-stone-100 border border-stone-200 text-stone-700 text-xs rounded-xl px-3 py-2 font-medium focus:outline-none focus:ring-2 focus:ring-brand-500/50">
+            <option value="all">All Status</option>
+            <option value="garden">In My Garden</option>
+            <option value="wishlist">Wishlist</option>
+          </select>
+        </div>
+
+        <!-- Sunlight & Category Filter Pills -->
+        <div class="flex flex-col gap-2">
+          <!-- Light Filter -->
+          <div class="flex items-center justify-between text-xs overflow-x-auto no-scrollbar gap-2">
+            <span class="text-stone-400 text-[11px] font-medium shrink-0 flex items-center gap-1">
+              <i data-lucide="sun" class="w-3.5 h-3.5"></i> Light:
+            </span>
+            <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0">
+              <button onclick="setLightFilter('all')" id="filter-light-all" class="px-2.5 py-1 rounded-full text-xs font-medium border bg-brand-800 text-white border-brand-800 transition-colors">All</button>
+              <button onclick="setLightFilter('Full Sun')" id="filter-light-sun" class="px-2.5 py-1 rounded-full text-xs font-medium border bg-stone-100 text-stone-600 border-stone-200 hover:bg-stone-200 transition-colors flex items-center gap-1">
+                <span class="w-2 h-2 rounded-full bg-amber-400"></span> Full Sun
+              </button>
+              <button onclick="setLightFilter('Partial Shade')" id="filter-light-partial" class="px-2.5 py-1 rounded-full text-xs font-medium border bg-stone-100 text-stone-600 border-stone-200 hover:bg-stone-200 transition-colors flex items-center gap-1">
+                <span class="w-2 h-2 rounded-full bg-orange-400"></span> Partial Shade
+              </button>
+              <button onclick="setLightFilter('Full Shade')" id="filter-light-shade" class="px-2.5 py-1 rounded-full text-xs font-medium border bg-stone-100 text-stone-600 border-stone-200 hover:bg-stone-200 transition-colors flex items-center gap-1">
+                <span class="w-2 h-2 rounded-full bg-slate-400"></span> Full Shade
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Plant Cards Container -->
+      <div id="plant-cards-container" class="flex-1 overflow-y-auto p-4 space-y-3 pb-24">
+        <!-- Rendered dynamically -->
+      </div>
+    </section>
+
+    <section id="view-map" class="flex-1 flex flex-col h-full overflow-hidden bg-stone-200 relative hidden">
+      
+      <!-- Interactive Toolbar Header for Map -->
+      <div class="bg-white/95 backdrop-blur-md border-b border-stone-300 px-4 py-2.5 z-20 flex items-center justify-between shadow-xs">
+        <div class="flex items-center space-x-2">
+          <span class="text-xs font-semibold text-stone-700 flex items-center gap-1">
+            <i data-lucide="map" class="w-4 h-4 text-brand-600"></i> Garden Canvas
+          </span>
+          <span class="text-[10px] text-stone-400 hidden xs:inline">Drag markers onto garden beds</span>
+        </div>
+
+        <div class="flex items-center space-x-2">
+          <button onclick="openZoneModal()" class="bg-amber-100 hover:bg-amber-200 text-amber-800 text-xs font-medium px-2.5 py-1.5 rounded-lg border border-amber-300/60 flex items-center gap-1 transition-all active:scale-95 shadow-xs">
+            <i data-lucide="layout-grid" class="w-3.5 h-3.5"></i>
+            <span>+ Garden Bed</span>
+          </button>
+          <button onclick="openUnplacedDrawer()" class="bg-brand-600 hover:bg-brand-700 text-white text-xs font-medium px-2.5 py-1.5 rounded-lg shadow-xs flex items-center gap-1 transition-all active:scale-95">
+            <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
+            <span>Place Plant</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Garden Map Scrollable Surface Canvas -->
+      <div id="map-viewport" class="flex-1 overflow-auto relative p-6 grid-pattern flex items-center justify-center cursor-grab active:cursor-grabbing">
+        <!-- Main Interactive Map Bounds Container -->
+        <div id="garden-canvas" class="w-[900px] h-[650px] bg-stone-50 rounded-2xl border-2 border-stone-300 shadow-lg relative overflow-hidden transition-all my-auto shrink-0">
+          
+          <!-- Compass Overlay -->
+          <div class="absolute top-3 right-3 bg-white/80 backdrop-blur rounded-full px-2.5 py-1 text-[10px] font-bold text-stone-500 border border-stone-200 shadow-xs flex items-center gap-1 z-10">
+            <i data-lucide="compass" class="w-3.5 h-3.5 text-brand-600"></i> N
+          </div>
+
+          <!-- Light Conditions Legend Overlay -->
+          <div class="absolute bottom-3 left-3 bg-white/90 backdrop-blur rounded-xl p-2.5 text-[10px] text-stone-600 border border-stone-200 shadow-sm z-10 flex flex-col gap-1.5">
+            <div class="font-bold text-[9px] uppercase tracking-wider text-stone-400 mb-0.5">Light Zones</div>
+            <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-amber-300 border border-amber-500"></span> Full Sun</div>
+            <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-orange-200 border border-orange-400"></span> Partial Shade</div>
+            <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-slate-300 border border-slate-400"></span> Full Shade</div>
+          </div>
+
+          <!-- ZONES & PLANT MARKERS LAYER -->
+          <div id="zones-layer" class="absolute inset-0 pointer-events-auto">
+            <!-- Garden Beds render here dynamically -->
+          </div>
+
+          <div id="markers-layer" class="absolute inset-0 pointer-events-auto z-10">
+            <!-- Plant markers render here dynamically -->
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Quick Selected Item Detail Bar Footer on Map -->
+      <div id="map-selected-bar" class="hidden absolute bottom-20 left-4 right-4 bg-stone-900/90 text-white backdrop-blur-md rounded-2xl p-3 shadow-xl z-20 border border-stone-700 flex items-center justify-between transition-all">
+        <div class="flex items-center space-x-3 overflow-hidden">
+          <div id="selected-item-icon" class="w-10 h-10 rounded-xl bg-brand-700 flex items-center justify-center shrink-0 text-xl">
+            🌱
+          </div>
+          <div class="min-w-0">
+            <h4 id="selected-item-title" class="font-bold text-sm truncate">Rose Bush</h4>
+            <p id="selected-item-subtitle" class="text-xs text-stone-300 truncate">South Border Bed • Full Sun</p>
+          </div>
+        </div>
+        <div class="flex items-center space-x-2 shrink-0">
+          <button id="btn-unmap-item" class="px-2.5 py-1.5 bg-stone-800 hover:bg-stone-700 text-stone-200 text-xs rounded-lg border border-stone-600 flex items-center gap-1">
+            <i data-lucide="minus-circle" class="w-3.5 h-3.5 text-amber-400"></i> Remove From Map
+          </button>
+          <button onclick="closeSelectedBar()" class="p-1.5 text-stone-400 hover:text-white">
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+
+    </section>
+
+    <section id="view-db" class="flex-1 flex flex-col h-full overflow-y-auto bg-stone-100 p-4 pb-24 hidden">
+      <div class="max-w-xl mx-auto w-full space-y-4">
+        
+        <!-- Connection Config Card -->
+        <div class="bg-white p-5 rounded-2xl border border-stone-200 shadow-xs space-y-4">
+          <div class="flex items-center justify-between border-b border-stone-100 pb-3">
+            <div class="flex items-center space-x-2.5">
+              <div class="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                <i data-lucide="database" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <h3 class="font-bold text-stone-800 text-sm">Supabase Database Integration</h3>
+                <p class="text-xs text-stone-400">Sync garden plants & beds directly to your cloud backend</p>
+              </div>
+            </div>
+            <span id="card-db-status-badge" class="px-2.5 py-1 bg-amber-100 text-amber-800 border border-amber-200 text-[10px] font-bold rounded-full">
+              Local Storage
+            </span>
+          </div>
+
+          <form onsubmit="handleSaveDbSettings(event)" class="space-y-3">
+            <div>
+              <label class="block text-xs font-semibold text-stone-600 mb-1">Supabase Project URL</label>
+              <input type="text" id="db-input-url" placeholder="https://xyzcompany.supabase.co" class="w-full px-3 py-2 text-xs border border-stone-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none">
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-stone-600 mb-1">Supabase Anon Key</label>
+              <input type="password" id="db-input-key" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." class="w-full px-3 py-2 text-xs border border-stone-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none">
+            </div>
+
+            <div class="pt-2 flex items-center space-x-2">
+              <button type="submit" class="flex-1 bg-brand-700 hover:bg-brand-800 text-white text-xs font-semibold py-2.5 rounded-xl shadow-xs transition-all flex items-center justify-center gap-1.5">
+                <i data-lucide="save" class="w-4 h-4"></i> Save & Connect Supabase
+              </button>
+              <button type="button" onclick="disconnectSupabase()" class="px-3 py-2.5 border border-stone-300 hover:bg-stone-100 text-stone-600 text-xs font-medium rounded-xl">
+                Disconnect
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Migration & SQL Setup Script Card -->
+        <div class="bg-white p-5 rounded-2xl border border-stone-200 shadow-xs space-y-3">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+              <i data-lucide="code" class="w-4 h-4 text-brand-600"></i>
+              <h4 class="font-bold text-stone-800 text-xs">Supabase SQL Schema Script</h4>
+            </div>
+            <button onclick="copySqlScript()" class="text-xs font-semibold text-brand-700 hover:text-brand-800 flex items-center gap-1 bg-stone-100 px-2.5 py-1 rounded-lg border border-stone-200">
+              <i data-lucide="copy" class="w-3.5 h-3.5"></i> Copy SQL
+            </button>
+          </div>
+          <p class="text-xs text-stone-500 leading-relaxed">
+            Run this script in your Supabase project's <strong class="text-stone-700">SQL Editor</strong> to create the required tables (<code class="text-emerald-700 bg-stone-100 px-1 rounded">plants</code> and <code class="text-emerald-700 bg-stone-100 px-1 rounded">garden_beds</code>) with public access policies.
+          </p>
+
+          <pre id="sql-script-text" class="bg-stone-900 text-stone-200 p-3 rounded-xl text-[10px] font-mono overflow-x-auto leading-relaxed border border-stone-800">
+-- 1. Create Garden Beds Table
+CREATE TABLE IF NOT EXISTS public.garden_beds (
+  id TEXT PRIMARY KEY,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  name TEXT NOT NULL,
+  sunlight TEXT NOT NULL,
+  x INT DEFAULT 50,
+  y INT DEFAULT 50,
+  width INT DEFAULT 300,
+  height INT DEFAULT 200,
+  color TEXT
+);
+
+-- 2. Create Plants Table
+CREATE TABLE IF NOT EXISTS public.plants (
+  id TEXT PRIMARY KEY,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  name TEXT NOT NULL,
+  botanical_name TEXT,
+  sunlight TEXT NOT NULL,
+  water TEXT DEFAULT 'Moderate',
+  soil TEXT DEFAULT 'Well-Drained',
+  category TEXT,
+  status TEXT DEFAULT 'garden',
+  notes TEXT,
+  emoji TEXT DEFAULT '🪴',
+  bed_id TEXT REFERENCES public.garden_beds(id) ON DELETE SET NULL,
+  x_pos INT,
+  y_pos INT
+);
+
+-- 3. Enable RLS and create public read/write policies
+ALTER TABLE public.garden_beds ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.plants ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Allow public read/write on garden_beds" ON public.garden_beds FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public read/write on plants" ON public.plants FOR ALL USING (true) WITH CHECK (true);
+          </pre>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Mobile Navigation Bar -->
+  <nav class="bg-white border-t border-stone-200 px-6 py-2.5 shrink-0 z-30 shadow-lg">
+    <div class="flex items-center justify-around max-w-sm mx-auto">
+      <button id="nav-btn-directory" onclick="switchTab('directory')" class="flex flex-col items-center text-brand-700 transition-colors">
+        <i data-lucide="list-tree" class="w-5 h-5"></i>
+        <span class="text-[11px] font-medium mt-1">Directory</span>
+      </button>
+
+      <button id="nav-btn-map" onclick="switchTab('map')" class="flex flex-col items-center text-stone-400 hover:text-stone-600 transition-colors">
+        <i data-lucide="map" class="w-5 h-5"></i>
+        <span class="text-[11px] font-medium mt-1">Garden Map</span>
+      </button>
+
+      <button id="nav-btn-db" onclick="switchTab('db')" class="flex flex-col items-center text-stone-400 hover:text-stone-600 transition-colors">
+        <i data-lucide="database" class="w-5 h-5"></i>
+        <span class="text-[11px] font-medium mt-1">Supabase DB</span>
+      </button>
+    </div>
+  </nav>
+
+
+  <!-- MODAL: Add / Edit Plant Form -->
+  <div id="modal-plant-form" class="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-end sm:items-center justify-center hidden transition-opacity">
+    <div class="bg-white w-full sm:max-w-lg rounded-t-3xl sm:rounded-2xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+      
+      <div class="px-5 py-4 border-b border-stone-200 flex items-center justify-between bg-stone-50">
+        <div class="flex items-center gap-2">
+          <i data-lucide="leaf" class="w-5 h-5 text-brand-600"></i>
+          <h3 id="plant-modal-title" class="font-serif font-bold text-lg text-stone-800">Add New Plant</h3>
+        </div>
+        <button onclick="closePlantModal()" class="p-1 rounded-full text-stone-400 hover:bg-stone-200">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <form id="plant-form" onsubmit="handlePlantFormSubmit(event)" class="p-5 space-y-4 overflow-y-auto flex-1">
+        <input type="hidden" id="plant-id" />
+
+        <div class="grid grid-cols-4 gap-3">
+          <div class="col-span-3">
+            <label class="block text-xs font-semibold text-stone-600 mb-1">Plant Name *</label>
+            <input type="text" id="form-name" required placeholder="e.g. Lavender, Japanese Maple" class="w-full px-3 py-2 text-sm border border-stone-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-stone-600 mb-1">Emoji Icon</label>
+            <input type="text" id="form-emoji" maxlength="2" value="🪴" class="w-full text-center px-2 py-2 text-sm border border-stone-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-stone-600 mb-1">Botanical Name</label>
+            <input type="text" id="form-species" placeholder="e.g. Lavandula angustifolia" class="w-full px-3 py-2 text-sm border border-stone-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-stone-600 mb-1">Garden Status</label>
+            <select id="form-status" class="w-full px-3 py-2 text-sm border border-stone-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none bg-white">
+              <option value="garden">In My Garden</option>
+              <option value="wishlist">Wishlist / Want to Buy</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="p-3.5 bg-stone-50 rounded-xl border border-stone-200 space-y-3">
+          <div class="text-xs font-bold text-brand-800 uppercase tracking-wide flex items-center gap-1.5">
+            <i data-lucide="sun-medium" class="w-3.5 h-3.5"></i> Growing Conditions
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label class="block text-[11px] font-medium text-stone-600 mb-1">Sunlight</label>
+              <select id="form-sunlight" class="w-full px-2 py-1.5 text-xs border border-stone-300 rounded-lg bg-white">
+                <option value="Full Sun">Full Sun ☀️</option>
+                <option value="Partial Shade">Partial Shade ⛅</option>
+                <option value="Full Shade">Full Shade ☁️</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-[11px] font-medium text-stone-600 mb-1">Water Need</label>
+              <select id="form-water" class="w-full px-2 py-1.5 text-xs border border-stone-300 rounded-lg bg-white">
+                <option value="Low">Low 💧</option>
+                <option value="Moderate">Moderate 💧💧</option>
+                <option value="High">High 💧💧💧</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-[11px] font-medium text-stone-600 mb-1">Soil Type</label>
+              <select id="form-soil" class="w-full px-2 py-1.5 text-xs border border-stone-300 rounded-lg bg-white">
+                <option value="Well-Drained">Well-Drained</option>
+                <option value="Moist & Rich">Moist & Rich</option>
+                <option value="Sandy / Dry">Sandy / Dry</option>
+                <option value="Clay / Heavy">Clay / Heavy</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-stone-600 mb-1">Category</label>
+          <select id="form-category" class="w-full px-3 py-2 text-sm border border-stone-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none bg-white">
+            <option value="Perennial">Perennial</option>
+            <option value="Annual">Annual</option>
+            <option value="Vegetable">Vegetable</option>
+            <option value="Herb">Herb</option>
+            <option value="Shrub">Shrub</option>
+            <option value="Tree">Tree</option>
+            <option value="Succulent">Succulent</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-stone-600 mb-1">Notes & Care Instructions</label>
+          <textarea id="form-notes" rows="3" placeholder="e.g. Needs afternoon shade. Prune lightly in early spring." class="w-full px-3 py-2 text-sm border border-stone-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none"></textarea>
+        </div>
+
+        <div class="pt-2 flex items-center justify-end space-x-2">
+          <button type="button" onclick="closePlantModal()" class="px-4 py-2 text-xs font-semibold text-stone-600 hover:bg-stone-100 rounded-xl">Cancel</button>
+          <button type="submit" class="px-5 py-2 text-xs font-semibold text-white bg-brand-700 hover:bg-brand-800 rounded-xl shadow-md transition-all active:scale-95">Save Plant</button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: Add Garden Bed -->
+  <div id="modal-zone-form" class="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center hidden">
+    <div class="bg-white w-full max-w-sm rounded-2xl p-5 shadow-2xl mx-4 space-y-4">
+      <div class="flex items-center justify-between border-b border-stone-200 pb-3">
+        <h3 class="font-serif font-bold text-base text-stone-800">Add Garden Bed Zone</h3>
+        <button onclick="closeZoneModal()" class="text-stone-400 hover:text-stone-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+
+      <form id="zone-form" onsubmit="handleZoneFormSubmit(event)" class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-stone-600 mb-1">Bed Name *</label>
+          <input type="text" id="zone-name" required placeholder="e.g. Patio Border, South Deck" class="w-full px-3 py-2 text-xs border border-stone-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-stone-600 mb-1">Assigned Sunlight</label>
+          <select id="zone-light" class="w-full px-3 py-2 text-xs border border-stone-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none bg-white">
+            <option value="Full Sun">Full Sun (6+ hrs sun)</option>
+            <option value="Partial Shade">Partial Shade (3-6 hrs sun)</option>
+            <option value="Full Shade">Full Shade (&lt;3 hrs sun)</option>
+          </select>
+        </div>
+
+        <div class="pt-2 flex justify-end space-x-2">
+          <button type="button" onclick="closeZoneModal()" class="px-3 py-1.5 text-xs text-stone-600">Cancel</button>
+          <button type="submit" class="px-4 py-1.5 text-xs font-semibold bg-brand-700 text-white rounded-lg">Create Bed</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- DRAWER: Pick Unplaced Plant to Place on Map -->
+  <div id="drawer-unplaced" class="fixed inset-x-0 bottom-0 z-40 bg-white border-t border-stone-300 rounded-t-3xl shadow-2xl p-4 transform translate-y-full transition-transform duration-300 max-h-[60vh] flex flex-col">
+    <div class="flex items-center justify-between border-b border-stone-100 pb-2 mb-3">
+      <div class="flex items-center space-x-2">
+        <i data-lucide="map-pin" class="w-4 h-4 text-brand-600"></i>
+        <h3 class="font-bold text-sm text-stone-800">Select Plant to Place on Canvas</h3>
+      </div>
+      <button onclick="closeUnplacedDrawer()" class="p-1 text-stone-400 hover:text-stone-600">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+
+    <div id="unplaced-list" class="flex-1 overflow-y-auto space-y-2 pr-1">
+      <!-- Dynamic unplaced plant list -->
+    </div>
+  </div>
+
+  <!-- In-app Toast Message -->
+  <div id="verdant-toast" class="fixed bottom-16 sm:bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 bg-stone-900 text-white text-xs font-medium rounded-full shadow-2xl flex items-center gap-2 transition-all opacity-0 pointer-events-none transform translate-y-2">
+    <span id="toast-icon">🌿</span>
+    <span id="toast-message">Notification</span>
+  </div>
+
+  <!-- Confirmation Dialog -->
+  <div id="modal-confirm" class="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+    <div class="bg-white w-full max-w-xs rounded-2xl p-5 shadow-2xl text-center space-y-4">
+      <div class="w-12 h-12 rounded-full bg-red-100 text-red-600 mx-auto flex items-center justify-center text-xl">
+        <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+      </div>
+      <div>
+        <h3 id="confirm-title" class="font-bold text-sm text-stone-800">Are you sure?</h3>
+        <p id="confirm-message" class="text-xs text-stone-500 mt-1">This action cannot be undone.</p>
+      </div>
+      <div class="flex items-center justify-center gap-2 pt-1">
+        <button id="btn-confirm-cancel" class="flex-1 py-2 text-xs font-semibold text-stone-600 bg-stone-100 hover:bg-stone-200 rounded-xl">Cancel</button>
+        <button id="btn-confirm-ok" class="flex-1 py-2 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 rounded-xl">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- SAMPLE STARTER DATA ---
+    const DEFAULT_PLANTS = [
+      {
+        id: 'p1',
+        name: 'Lavender (Munstead)',
+        botanical_name: 'Lavandula angustifolia',
+        emoji: '🪻',
+        status: 'garden',
+        sunlight: 'Full Sun',
+        water: 'Low',
+        soil: 'Well-Drained',
+        category: 'Perennial',
+        notes: 'Needs plenty of direct sun and light watering. Great for pollinators.',
+        x_pos: 120,
+        y_pos: 110,
+        bed_id: 'z1'
+      },
+      {
+        id: 'p2',
+        name: 'Japanese Forest Grass',
+        botanical_name: 'Hakonechloa macra',
+        emoji: '🌾',
+        status: 'garden',
+        sunlight: 'Partial Shade',
+        water: 'Moderate',
+        soil: 'Moist & Rich',
+        category: 'Perennial',
+        notes: 'Flowing golden-green foliage. Beautiful in shady borders.',
+        x_pos: 520,
+        y_pos: 130,
+        bed_id: 'z2'
+      },
+      {
+        id: 'p3',
+        name: 'Hostas (Empress Wu)',
+        botanical_name: 'Hosta hybrid',
+        emoji: '🍃',
+        status: 'garden',
+        sunlight: 'Full Shade',
+        water: 'Moderate',
+        soil: 'Moist & Rich',
+        category: 'Perennial',
+        notes: 'Keep soil consistently damp. Watch for garden slugs.',
+        x_pos: 550,
+        y_pos: 400,
+        bed_id: 'z3'
+      },
+      {
+        id: 'p4',
+        name: 'Sun Gold Cherry Tomato',
+        botanical_name: 'Solanum lycopersicum',
+        emoji: '🍅',
+        status: 'wishlist',
+        sunlight: 'Full Sun',
+        water: 'High',
+        soil: 'Moist & Rich',
+        category: 'Vegetable',
+        notes: 'Plan for tomato cage support along south deck.',
+        x_pos: null,
+        y_pos: null,
+        bed_id: null
+      }
+    ];
+
+    const DEFAULT_ZONES = [
+      {
+        id: 'z1',
+        name: 'South Sun Deck Bed',
+        sunlight: 'Full Sun',
+        x: 50,
+        y: 50,
+        width: 320,
+        height: 220
+      },
+      {
+        id: 'z2',
+        name: 'Patio Partial Shade Border',
+        sunlight: 'Partial Shade',
+        x: 450,
+        y: 50,
+        width: 380,
+        height: 240
+      },
+      {
+        id: 'z3',
+        name: 'North Fence Shade Nook',
+        sunlight: 'Full Shade',
+        x: 450,
+        y: 330,
+        width: 380,
+        height: 250
+      }
+    ];
+
+    // State Variables
+    let supabaseClient = null;
+    let isConnectedToSupabase = false;
+    let plants = [];
+    let zones = [];
+    let activeTab = 'directory';
+    let lightFilter = 'all';
+    let selectedPlantId = null;
+
+    // --- INITIALIZATION ---
+    window.addEventListener('DOMContentLoaded', async () => {
+      initSupabaseFromStorage();
+      await fetchAllData();
+      renderPlantList();
+      renderMap();
+      lucide.createIcons();
+    });
+
+    // --- STREAMING_CHUNK:Supabase Database Client Engine... ---
+    function initSupabaseFromStorage() {
+      const url = localStorage.getItem('verdant_sb_url');
+      const key = localStorage.getItem('verdant_sb_key');
+
+      if (url && key && window.supabase) {
+        try {
+          supabaseClient = window.supabase.createClient(url, key);
+          document.getElementById('db-input-url').value = url;
+          document.getElementById('db-input-key').value = key;
+        } catch (e) {
+          console.error("Supabase init error:", e);
+          supabaseClient = null;
+        }
+      }
+    }
+
+    async function testSupabaseConnection() {
+      if (!supabaseClient) return false;
+      try {
+        const { data, error } = await supabaseClient.from('garden_beds').select('id').limit(1);
+        if (error && error.code !== 'PGRST116') {
+          console.warn("Supabase connection check warning:", error);
+        }
+        return true;
+      } catch (e) {
+        return false;
+      }
+    }
+
+    function updateDbStatusUI(connected) {
+      isConnectedToSupabase = connected;
+      const dot = document.getElementById('db-status-dot');
+      const text = document.getElementById('db-status-text');
+      const badge = document.getElementById('card-db-status-badge');
+
+      if (connected) {
+        dot.className = "w-2 h-2 rounded-full bg-emerald-400 animate-pulse";
+        text.innerText = "Supabase Connected";
+        badge.className = "px-2.5 py-1 bg-emerald-100 text-emerald-800 border border-emerald-200 text-[10px] font-bold rounded-full";
+        badge.innerText = "Cloud Sync Active";
+      } else {
+        dot.className = "w-2 h-2 rounded-full bg-amber-400";
+        text.innerText = "Local Storage Mode";
+        badge.className = "px-2.5 py-1 bg-amber-100 text-amber-800 border border-amber-200 text-[10px] font-bold rounded-full";
+        badge.innerText = "Local Storage Only";
+      }
+    }
+
+    async function handleSaveDbSettings(e) {
+      e.preventDefault();
+      const url = document.getElementById('db-input-url').value.trim();
+      const key = document.getElementById('db-input-key').value.trim();
+
+      if (!url || !key) {
+        showToast("Please enter both URL and Anon Key", "⚠️");
+        return;
+      }
+
+      localStorage.setItem('verdant_sb_url', url);
+      localStorage.setItem('verdant_sb_key', key);
+
+      initSupabaseFromStorage();
+      const connected = await testSupabaseConnection();
+
+      if (connected) {
+        updateDbStatusUI(true);
+        showToast("Connected to Supabase!", "⚡");
+        await fetchAllData();
+        renderPlantList();
+        renderMap();
+      } else {
+        updateDbStatusUI(false);
+        showToast("Could not connect to Supabase. Check URL/Key or run SQL script.", "❌");
+      }
+    }
+
+    function disconnectSupabase() {
+      localStorage.removeItem('verdant_sb_url');
+      localStorage.removeItem('verdant_sb_key');
+      supabaseClient = null;
+      document.getElementById('db-input-url').value = '';
+      document.getElementById('db-input-key').value = '';
+      updateDbStatusUI(false);
+      showToast("Disconnected from Supabase. Switched to LocalStorage.", "🔌");
+      fetchAllData().then(() => {
+        renderPlantList();
+        renderMap();
+      });
+    }
+
+    // --- DATA FETCHING & SYNC ---
+    async function fetchAllData() {
+      let connected = false;
+      if (supabaseClient) {
+        try {
+          const { data: bedsData, error: bedsErr } = await supabaseClient.from('garden_beds').select('*');
+          const { data: plantsData, error: plantsErr } = await supabaseClient.from('plants').select('*');
+
+          if (!bedsErr && !plantsErr) {
+            connected = true;
+            zones = bedsData || [];
+            plants = plantsData || [];
+          }
+        } catch (e) {
+          connected = false;
+        }
+      }
+
+      updateDbStatusUI(connected);
+
+      if (!connected) {
+        // Fallback to LocalStorage
+        const storedPlants = localStorage.getItem('verdant_plants');
+        const storedZones = localStorage.getItem('verdant_zones');
+
+        plants = storedPlants ? JSON.parse(storedPlants) : DEFAULT_PLANTS;
+        zones = storedZones ? JSON.parse(storedZones) : DEFAULT_ZONES;
+
+        if (!storedPlants) savePlantsLocal();
+        if (!storedZones) saveZonesLocal();
+      }
+    }
+
+    function savePlantsLocal() {
+      localStorage.setItem('verdant_plants', JSON.stringify(plants));
+    }
+
+    function saveZonesLocal() {
+      localStorage.setItem('verdant_zones', JSON.stringify(zones));
+    }
+
+    // --- STREAMING_CHUNK:Database CRUD Operations for Plants and Beds... ---
+    async function syncSavePlant(plant) {
+      if (isConnectedToSupabase && supabaseClient) {
+        const payload = {
+          id: plant.id,
+          name: plant.name,
+          botanical_name: plant.botanical_name,
+          sunlight: plant.sunlight,
+          water: plant.water,
+          soil: plant.soil,
+          category: plant.category,
+          status: plant.status,
+          notes: plant.notes,
+          emoji: plant.emoji,
+          bed_id: plant.bed_id,
+          x_pos: plant.x_pos,
+          y_pos: plant.y_pos
+        };
+
+        const { error } = await supabaseClient.from('plants').upsert(payload);
+        if (error) console.error("Supabase plant save error:", error);
+      }
+      savePlantsLocal();
+    }
+
+    async function syncDeletePlant(plantId) {
+      if (isConnectedToSupabase && supabaseClient) {
+        const { error } = await supabaseClient.from('plants').delete().eq('id', plantId);
+        if (error) console.error("Supabase plant delete error:", error);
+      }
+      savePlantsLocal();
+    }
+
+    async function syncSaveZone(zone) {
+      if (isConnectedToSupabase && supabaseClient) {
+        const payload = {
+          id: zone.id,
+          name: zone.name,
+          sunlight: zone.sunlight,
+          x: zone.x,
+          y: zone.y,
+          width: zone.width,
+          height: zone.height
+        };
+
+        const { error } = await supabaseClient.from('garden_beds').upsert(payload);
+        if (error) console.error("Supabase zone save error:", error);
+      }
+      saveZonesLocal();
+    }
+
+    async function syncDeleteZone(zoneId) {
+      if (isConnectedToSupabase && supabaseClient) {
+        const { error } = await supabaseClient.from('garden_beds').delete().eq('id', zoneId);
+        if (error) console.error("Supabase zone delete error:", error);
+      }
+      saveZonesLocal();
+    }
+
+    // --- TAB SWITCHER ---
+    function switchTab(tab) {
+      activeTab = tab;
+      const dirView = document.getElementById('view-directory');
+      const mapView = document.getElementById('view-map');
+      const dbView = document.getElementById('view-db');
+
+      const navBtnDir = document.getElementById('nav-btn-directory');
+      const navBtnMap = document.getElementById('nav-btn-map');
+      const navBtnDb = document.getElementById('nav-btn-db');
+
+      [dirView, mapView, dbView].forEach(v => v.classList.add('hidden'));
+
+      navBtnDir.className = "flex flex-col items-center text-stone-400 hover:text-stone-600 transition-colors";
+      navBtnMap.className = "flex flex-col items-center text-stone-400 hover:text-stone-600 transition-colors";
+      navBtnDb.className = "flex flex-col items-center text-stone-400 hover:text-stone-600 transition-colors";
+
+      if (tab === 'directory') {
+        dirView.classList.remove('hidden');
+        navBtnDir.className = "flex flex-col items-center text-brand-700 transition-colors";
+      } else if (tab === 'map') {
+        mapView.classList.remove('hidden');
+        navBtnMap.className = "flex flex-col items-center text-brand-700 transition-colors";
+        renderMap();
+      } else if (tab === 'db') {
+        dbView.classList.remove('hidden');
+        navBtnDb.className = "flex flex-col items-center text-brand-700 transition-colors";
+      }
+    }
+
+    // --- STREAMING_CHUNK:Rendering plant cards list... ---
+    function setLightFilter(filter) {
+      lightFilter = filter;
+      
+      const filters = ['all', 'sun', 'partial', 'shade'];
+      filters.forEach(f => {
+        const btn = document.getElementById(`filter-light-${f}`);
+        if (!btn) return;
+
+        if ((f === 'all' && filter === 'all') ||
+            (f === 'sun' && filter === 'Full Sun') ||
+            (f === 'partial' && filter === 'Partial Shade') ||
+            (f === 'shade' && filter === 'Full Shade')) {
+          btn.className = "px-2.5 py-1 rounded-full text-xs font-medium border bg-brand-800 text-white border-brand-800 transition-colors flex items-center gap-1";
+        } else {
+          btn.className = "px-2.5 py-1 rounded-full text-xs font-medium border bg-stone-100 text-stone-600 border-stone-200 hover:bg-stone-200 transition-colors flex items-center gap-1";
+        }
+      });
+
+      renderPlantList();
+    }
+
+    function renderPlantList() {
+      const container = document.getElementById('plant-cards-container');
+      const searchTerm = document.getElementById('input-search').value.toLowerCase();
+      const statusFilter = document.getElementById('select-status-filter').value;
+
+      const filtered = plants.filter(plant => {
+        const matchesSearch = plant.name.toLowerCase().includes(searchTerm) || 
+                              (plant.botanical_name && plant.botanical_name.toLowerCase().includes(searchTerm)) ||
+                              (plant.category && plant.category.toLowerCase().includes(searchTerm));
+        
+        const matchesStatus = statusFilter === 'all' || plant.status === statusFilter;
+        const matchesLight = lightFilter === 'all' || plant.sunlight === lightFilter;
+
+        return matchesSearch && matchesStatus && matchesLight;
+      });
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-12 px-4 bg-white rounded-2xl border border-stone-200">
+            <div class="text-4xl mb-2">🌿</div>
+            <h3 class="font-bold text-stone-700 text-sm">No plants found</h3>
+            <p class="text-xs text-stone-400 mt-1">Try adjusting your filters or search query.</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = filtered.map(plant => {
+        const lightBadgeColor = plant.sunlight === 'Full Sun' 
+          ? 'bg-amber-100 text-amber-800 border-amber-300' 
+          : plant.sunlight === 'Partial Shade' 
+            ? 'bg-orange-100 text-orange-800 border-orange-300' 
+            : 'bg-slate-200 text-slate-800 border-slate-300';
+
+        const isMapped = plant.x_pos !== null && plant.y_pos !== null;
+        const bed = zones.find(z => z.id === plant.bed_id);
+
+        return `
+          <div class="bg-white rounded-2xl p-4 border border-stone-200/80 shadow-xs hover:shadow-md transition-all flex flex-col justify-between space-y-3">
+            <div class="flex items-start justify-between">
+              <div class="flex items-start space-x-3">
+                <div class="w-12 h-12 rounded-2xl bg-stone-100 flex items-center justify-center text-2xl border border-stone-200/60 shrink-0">
+                  ${plant.emoji || '🪴'}
+                </div>
+                <div>
+                  <div class="flex items-center gap-2">
+                    <h3 class="font-bold text-stone-800 text-sm leading-tight">${plant.name}</h3>
+                    ${plant.status === 'wishlist' ? '<span class="px-2 py-0.5 text-[9px] bg-purple-100 text-purple-700 font-semibold rounded-full border border-purple-200">Wishlist</span>' : ''}
+                  </div>
+                  <p class="text-xs text-stone-400 italic mt-0.5">${plant.botanical_name || 'Botanical name unspecified'}</p>
+                  <p class="text-[11px] text-stone-500 font-medium mt-1">${plant.category || 'Perennial'}</p>
+                </div>
+              </div>
+
+              <div class="flex items-center space-x-1">
+                <button onclick="openPlantModal('${plant.id}')" title="Edit Plant" class="p-1.5 text-stone-400 hover:text-brand-700 hover:bg-stone-100 rounded-lg transition-colors">
+                  <i data-lucide="edit-3" class="w-4 h-4"></i>
+                </button>
+                <button onclick="deletePlant('${plant.id}')" title="Delete Plant" class="p-1.5 text-stone-400 hover:text-red-600 hover:bg-stone-100 rounded-lg transition-colors">
+                  <i data-lucide="trash-2" class="w-4 h-4"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- Badges -->
+            <div class="flex flex-wrap items-center gap-1.5 pt-1 text-[11px]">
+              <span class="px-2.5 py-0.5 rounded-full border font-medium ${lightBadgeColor}">
+                ${plant.sunlight}
+              </span>
+              <span class="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                💧 ${plant.water || 'Moderate'} Water
+              </span>
+              <span class="px-2.5 py-0.5 rounded-full bg-stone-100 text-stone-600 border border-stone-200">
+                🌱 ${plant.soil || 'Well-Drained'}
+              </span>
+              ${bed ? `<span class="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">🏡 ${bed.name}</span>` : ''}
+            </div>
+
+            ${plant.notes ? `<p class="text-xs text-stone-600 bg-stone-50 p-2.5 rounded-xl border border-stone-200/60 leading-relaxed">${plant.notes}</p>` : ''}
+
+            <div class="pt-1 flex items-center justify-between border-t border-stone-100">
+              <span class="text-[11px] font-medium ${isMapped ? 'text-emerald-700' : 'text-stone-400'} flex items-center gap-1">
+                <i data-lucide="${isMapped ? 'check-circle' : 'circle-dashed'}" class="w-3.5 h-3.5"></i>
+                ${isMapped ? 'Placed on Map' : 'Not on Map'}
+              </span>
+              <button onclick="jumpToMapWithPlant('${plant.id}')" class="text-xs font-semibold text-brand-700 hover:text-brand-800 flex items-center gap-1">
+                <span>${isMapped ? 'View on Map' : 'Place on Map'}</span>
+                <i data-lucide="arrow-right" class="w-3 h-3"></i>
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      lucide.createIcons();
+    }
+
+    // --- STREAMING_CHUNK:Rendering garden canvas, beds, and sunlight mismatch detection... ---
+    function renderMap() {
+      const zonesLayer = document.getElementById('zones-layer');
+      const markersLayer = document.getElementById('markers-layer');
+
+      // 1. Render Garden Beds
+      zonesLayer.innerHTML = zones.map(zone => {
+        let zoneClass = 'zone-pattern-sun';
+        if (zone.sunlight === 'Partial Shade') zoneClass = 'zone-pattern-partial';
+        if (zone.sunlight === 'Full Shade') zoneClass = 'zone-pattern-shade';
+
+        return `
+          <div id="zone-${zone.id}" 
+               style="left: ${zone.x}px; top: ${zone.y}px; width: ${zone.width || zone.w || 300}px; height: ${zone.height || zone.h || 200}px;"
+               class="absolute rounded-2xl ${zoneClass} p-3 flex flex-col justify-between transition-all">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-stone-700 bg-white/80 backdrop-blur px-2.5 py-1 rounded-lg shadow-xs border border-stone-200/60">
+                ${zone.name}
+              </span>
+              <button onclick="deleteZone('${zone.id}')" class="p-1 bg-white/80 rounded-md text-stone-400 hover:text-red-600 shadow-xs">
+                <i data-lucide="x" class="w-3 h-3"></i>
+              </button>
+            </div>
+            <div class="text-[10px] text-stone-500 font-semibold uppercase tracking-wider bg-white/70 w-max px-2 py-0.5 rounded">
+              ${zone.sunlight} Bed
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      // 2. Render Plant Markers on Canvas
+      const mappedPlants = plants.filter(p => p.x_pos !== null && p.y_pos !== null);
+      markersLayer.innerHTML = mappedPlants.map(plant => {
+        const isSelected = plant.id === selectedPlantId;
+        const bed = zones.find(z => z.id === plant.bed_id);
+        const hasSunMismatch = bed && bed.sunlight !== plant.sunlight;
+
+        return `
+          <div id="marker-${plant.id}"
+               data-plant-id="${plant.id}"
+               style="left: ${plant.x_pos}px; top: ${plant.y_pos}px;"
+               onmousedown="startMarkerDrag(event, '${plant.id}')"
+               ontouchstart="startMarkerDrag(event, '${plant.id}')"
+               onclick="selectPlantMarker('${plant.id}')"
+               class="absolute -translate-x-1/2 -translate-y-1/2 cursor-grab active:cursor-grabbing z-20 group">
+            
+            <div class="relative flex flex-col items-center">
+              ${hasSunMismatch ? `
+                <div class="absolute -top-2 -right-1 z-30 bg-amber-500 text-white rounded-full p-0.5 shadow-sm border border-white" title="Sunlight Mismatch! Bed is ${bed.sunlight}, but plant prefers ${plant.sunlight}">
+                  <i data-lucide="alert-triangle" class="w-3 h-3"></i>
+                </div>
+              ` : ''}
+
+              <div class="w-10 h-10 rounded-2xl bg-white shadow-md border-2 ${isSelected ? 'border-brand-600 marker-active' : (hasSunMismatch ? 'border-amber-400' : 'border-stone-300')} flex items-center justify-center text-xl transition-transform transform group-hover:scale-110">
+                ${plant.emoji || '🪴'}
+              </div>
+              <span class="mt-1 px-2 py-0.5 bg-stone-900/80 text-white text-[10px] font-medium rounded-full shadow-md whitespace-nowrap pointer-events-none">
+                ${plant.name}
+              </span>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      lucide.createIcons();
+    }
+
+    // Drag & Drop Marker Logic
+    let draggingPlantId = null;
+    let dragOffsetX = 0;
+    let dragOffsetY = 0;
+
+    function startMarkerDrag(e, plantId) {
+      e.stopPropagation();
+      draggingPlantId = plantId;
+      selectedPlantId = plantId;
+      showSelectedBar(plantId);
+
+      const canvas = document.getElementById('garden-canvas');
+      const rect = canvas.getBoundingClientRect();
+
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+      const plant = plants.find(p => p.id === plantId);
+      if (!plant) return;
+
+      dragOffsetX = (clientX - rect.left) - plant.x_pos;
+      dragOffsetY = (clientY - rect.top) - plant.y_pos;
+
+      window.addEventListener('mousemove', onMarkerDrag);
+      window.addEventListener('touchmove', onMarkerDrag);
+      window.addEventListener('mouseup', stopMarkerDrag);
+      window.addEventListener('touchend', stopMarkerDrag);
+    }
+
+    function onMarkerDrag(e) {
+      if (!draggingPlantId) return;
+
+      const canvas = document.getElementById('garden-canvas');
+      const rect = canvas.getBoundingClientRect();
+
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+      let newX = Math.round(clientX - rect.left - dragOffsetX);
+      let newY = Math.round(clientY - rect.top - dragOffsetY);
+
+      newX = Math.max(20, Math.min(880, newX));
+      newY = Math.max(20, Math.min(630, newY));
+
+      const plant = plants.find(p => p.id === draggingPlantId);
+      if (plant) {
+        plant.x_pos = newX;
+        plant.y_pos = newY;
+
+        // Auto detect zone underneath
+        const matchedZone = zones.find(z => {
+          const zw = z.width || z.w || 300;
+          const zh = z.height || z.h || 200;
+          return newX >= z.x && newX <= (z.x + zw) && newY >= z.y && newY <= (z.y + zh);
+        });
+        
+        plant.bed_id = matchedZone ? matchedZone.id : null;
+
+        const markerEl = document.getElementById(`marker-${plant.id}`);
+        if (markerEl) {
+          markerEl.style.left = `${newX}px`;
+          markerEl.style.top = `${newY}px`;
+        }
+      }
+    }
+
+    async function stopMarkerDrag() {
+      if (draggingPlantId) {
+        const plant = plants.find(p => p.id === draggingPlantId);
+        if (plant) {
+          await syncSavePlant(plant);
+        }
+        draggingPlantId = null;
+      }
+      window.removeEventListener('mousemove', onMarkerDrag);
+      window.removeEventListener('touchmove', onMarkerDrag);
+      window.removeEventListener('mouseup', stopMarkerDrag);
+      window.removeEventListener('touchend', stopMarkerDrag);
+      renderMap();
+    }
+
+    function selectPlantMarker(id) {
+      selectedPlantId = id;
+      showSelectedBar(id);
+      renderMap();
+    }
+
+    function showSelectedBar(plantId) {
+      const plant = plants.find(p => p.id === plantId);
+      if (!plant) return;
+
+      const bar = document.getElementById('map-selected-bar');
+      document.getElementById('selected-item-icon').innerText = plant.emoji || '🪴';
+      document.getElementById('selected-item-title').innerText = plant.name;
+
+      const zone = zones.find(z => z.id === plant.bed_id);
+      const zoneText = zone ? zone.name : 'Unassigned Bed';
+      
+      const isMismatch = zone && zone.sunlight !== plant.sunlight;
+      const mismatchWarning = isMismatch 
+        ? `<span class="text-amber-300 font-bold ml-1">⚠️ Sun mismatch: bed is ${zone.sunlight}</span>`
+        : '';
+
+      document.getElementById('selected-item-subtitle').innerHTML = `${zoneText} • ${plant.sunlight}${mismatchWarning}`;
+
+      const unmapBtn = document.getElementById('btn-unmap-item');
+      unmapBtn.onclick = () => unmapPlant(plantId);
+
+      bar.classList.remove('hidden');
+    }
+
+    function closeSelectedBar() {
+      document.getElementById('map-selected-bar').classList.add('hidden');
+      selectedPlantId = null;
+      renderMap();
+    }
+
+    async function unmapPlant(plantId) {
+      const plant = plants.find(p => p.id === plantId);
+      if (plant) {
+        plant.x_pos = null;
+        plant.y_pos = null;
+        plant.bed_id = null;
+        await syncSavePlant(plant);
+        closeSelectedBar();
+        renderMap();
+        renderPlantList();
+        showToast(`Removed ${plant.name} from map`, '📍');
+      }
+    }
+
+    function jumpToMapWithPlant(plantId) {
+      switchTab('map');
+      const plant = plants.find(p => p.id === plantId);
+      if (plant) {
+        if (plant.x_pos === null || plant.y_pos === null) {
+          plant.x_pos = 450;
+          plant.y_pos = 300;
+          syncSavePlant(plant);
+        }
+        selectPlantMarker(plantId);
+      }
+    }
+
+    // --- PLANT MODAL HANDLERS ---
+    function openPlantModal(plantId = null) {
+      const modal = document.getElementById('modal-plant-form');
+      const form = document.getElementById('plant-form');
+      const title = document.getElementById('plant-modal-title');
+
+      if (plantId) {
+        const plant = plants.find(p => p.id === plantId);
+        if (!plant) return;
+
+        title.innerText = 'Edit Plant';
+        document.getElementById('plant-id').value = plant.id;
+        document.getElementById('form-name').value = plant.name;
+        document.getElementById('form-species').value = plant.botanical_name || '';
+        document.getElementById('form-emoji').value = plant.emoji || '🪴';
+        document.getElementById('form-status').value = plant.status || 'garden';
+        document.getElementById('form-sunlight').value = plant.sunlight || 'Full Sun';
+        document.getElementById('form-water').value = plant.water || 'Moderate';
+        document.getElementById('form-soil').value = plant.soil || 'Well-Drained';
+        document.getElementById('form-category').value = plant.category || 'Perennial';
+        document.getElementById('form-notes').value = plant.notes || '';
+      } else {
+        title.innerText = 'Add New Plant';
+        form.reset();
+        document.getElementById('plant-id').value = '';
+      }
+
+      modal.classList.remove('hidden');
+    }
+
+    function closePlantModal() {
+      document.getElementById('modal-plant-form').classList.add('hidden');
+    }
+
+    async function handlePlantFormSubmit(e) {
+      e.preventDefault();
+      const id = document.getElementById('plant-id').value;
+
+      const existing = id ? plants.find(p => p.id === id) : null;
+
+      const plantData = {
+        id: id || 'p_' + Date.now(),
+        name: document.getElementById('form-name').value,
+        botanical_name: document.getElementById('form-species').value,
+        emoji: document.getElementById('form-emoji').value || '🪴',
+        status: document.getElementById('form-status').value,
+        sunlight: document.getElementById('form-sunlight').value,
+        water: document.getElementById('form-water').value,
+        soil: document.getElementById('form-soil').value,
+        category: document.getElementById('form-category').value,
+        notes: document.getElementById('form-notes').value,
+        x_pos: existing ? existing.x_pos : null,
+        y_pos: existing ? existing.y_pos : null,
+        bed_id: existing ? existing.bed_id : null
+      };
+
+      if (id) {
+        const idx = plants.findIndex(p => p.id === id);
+        if (idx !== -1) plants[idx] = plantData;
+        showToast(`Updated ${plantData.name}`, '🌱');
+      } else {
+        plants.push(plantData);
+        showToast(`Added ${plantData.name}`, '🌱');
+      }
+
+      await syncSavePlant(plantData);
+      renderPlantList();
+      renderMap();
+      closePlantModal();
+    }
+
+    function deletePlant(plantId) {
+      const plant = plants.find(p => p.id === plantId);
+      showConfirmDialog(
+        'Delete Plant?',
+        `Remove "${plant ? plant.name : 'this plant'}" from your garden directory?`,
+        async () => {
+          plants = plants.filter(p => p.id !== plantId);
+          await syncDeletePlant(plantId);
+          renderPlantList();
+          renderMap();
+          if (selectedPlantId === plantId) closeSelectedBar();
+          showToast('Plant deleted', '🗑️');
+        }
+      );
+    }
+
+    // --- ZONE / BED MODAL HANDLERS ---
+    function openZoneModal() {
+      document.getElementById('modal-zone-form').classList.remove('hidden');
+    }
+
+    function closeZoneModal() {
+      document.getElementById('modal-zone-form').classList.add('hidden');
+    }
+
+    async function handleZoneFormSubmit(e) {
+      e.preventDefault();
+
+      const newZone = {
+        id: 'z_' + Date.now(),
+        name: document.getElementById('zone-name').value,
+        sunlight: document.getElementById('zone-light').value,
+        x: 100 + (zones.length * 40) % 400,
+        y: 100 + (zones.length * 40) % 300,
+        width: 300,
+        height: 200
+      };
+
+      zones.push(newZone);
+      await syncSaveZone(newZone);
+      renderMap();
+      closeZoneModal();
+      document.getElementById('zone-form').reset();
+      showToast(`Created garden bed "${newZone.name}"`, '🏡');
+    }
+
+    function deleteZone(zoneId) {
+      const zone = zones.find(z => z.id === zoneId);
+      showConfirmDialog(
+        'Delete Garden Bed?',
+        `Remove "${zone ? zone.name : 'this bed'}"? Plants in this bed will remain on canvas.`,
+        async () => {
+          zones = zones.filter(z => z.id !== zoneId);
+          plants.forEach(p => {
+            if (p.bed_id === zoneId) p.bed_id = null;
+          });
+          await syncDeleteZone(zoneId);
+          renderMap();
+          showToast('Bed removed', '🗑️');
+        }
+      );
+    }
+
+    // --- UNPLACED DRAWER ---
+    function openUnplacedDrawer() {
+      const drawer = document.getElementById('drawer-unplaced');
+      const list = document.getElementById('unplaced-list');
+
+      const unplaced = plants.filter(p => p.x_pos === null || p.y_pos === null);
+
+      if (unplaced.length === 0) {
+        list.innerHTML = `
+          <div class="text-center py-6 text-xs text-stone-500">
+            All your plants are already placed on the map!
+          </div>
+        `;
+      } else {
+        list.innerHTML = unplaced.map(p => `
+          <div class="p-3 bg-stone-50 rounded-xl border border-stone-200 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+              <span class="text-2xl">${p.emoji || '🪴'}</span>
+              <div>
+                <h4 class="font-bold text-xs text-stone-800">${p.name}</h4>
+                <span class="text-[10px] text-stone-500">${p.sunlight} • ${p.category || 'Plant'}</span>
+              </div>
+            </div>
+            <button onclick="placePlantOnMap('${p.id}')" class="px-3 py-1.5 bg-brand-700 text-white text-xs font-semibold rounded-lg shadow-xs hover:bg-brand-800 transition-colors">
+              Place Marker
+            </button>
+          </div>
+        `).join('');
+      }
+
+      drawer.classList.remove('translate-y-full');
+    }
+
+    function closeUnplacedDrawer() {
+      document.getElementById('drawer-unplaced').classList.add('translate-y-full');
+    }
+
+    async function placePlantOnMap(plantId) {
+      const plant = plants.find(p => p.id === plantId);
+      if (plant) {
+        plant.x_pos = 450;
+        plant.y_pos = 300;
+        await syncSavePlant(plant);
+        closeUnplacedDrawer();
+        renderMap();
+        selectPlantMarker(plantId);
+        showToast(`Placed ${plant.name} on map`, '📍');
+      }
+    }
+
+    // --- UTILITIES & TOASTS ---
+    function copySqlScript() {
+      const scriptText = document.getElementById('sql-script-text').innerText;
+      
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(scriptText).then(() => {
+          showToast("SQL setup script copied to clipboard!", "📋");
+        }).catch(() => {
+          fallbackCopyText(scriptText);
+        });
+      } else {
+        fallbackCopyText(scriptText);
+      }
+    }
+
+    function fallbackCopyText(text) {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      document.body.appendChild(textarea);
+      textarea.select();
+      try {
+        document.execCommand('copy');
+        showToast("SQL setup script copied to clipboard!", "📋");
+      } catch (err) {
+        showToast("Unable to copy automatically", "⚠️");
+      }
+      document.body.removeChild(textarea);
+    }
+
+    let toastTimeout = null;
+    function showToast(message, icon = '🌿') {
+      const toast = document.getElementById('verdant-toast');
+      document.getElementById('toast-icon').innerText = icon;
+      document.getElementById('toast-message').innerText = message;
+
+      toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-2');
+      toast.classList.add('opacity-100', 'translate-y-0');
+
+      if (toastTimeout) clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => {
+        toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-2');
+        toast.classList.remove('opacity-100', 'translate-y-0');
+      }, 2500);
+    }
+
+    function showConfirmDialog(title, message, onConfirm) {
+      const modal = document.getElementById('modal-confirm');
+      document.getElementById('confirm-title').innerText = title;
+      document.getElementById('confirm-message').innerText = message;
+
+      const cancelBtn = document.getElementById('btn-confirm-cancel');
+      const okBtn = document.getElementById('btn-confirm-ok');
+
+      const cleanup = () => {
+        modal.classList.add('hidden');
+        cancelBtn.onclick = null;
+        okBtn.onclick = null;
+      };
+
+      cancelBtn.onclick = cleanup;
+      okBtn.onclick = () => {
+        cleanup();
+        onConfirm();
+      };
+
+      modal.classList.remove('hidden');
+    }
+  </script>
+</body>
+</html>
