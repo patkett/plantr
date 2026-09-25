@@ -67,6 +67,14 @@ function placementCount(plant) {
   return (plant.placements || []).length;
 }
 
+// Garden and wishlist plants can be placed; placing a wishlist plant moves it into the garden.
 function isPlaceable(plant) {
-  return plant.status === 'garden';
+  return plant.status === 'garden' || plant.status === 'wishlist';
+}
+
+// Returns true if the status changed.
+function promoteToGarden(plant) {
+  if (plant.status !== 'wishlist') return false;
+  plant.status = 'garden';
+  return true;
 }
