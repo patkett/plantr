@@ -158,7 +158,7 @@ async function handlePlantFormSubmit(e) {
   const plantData = {
     id: id || 'p_' + Date.now(),
     name: document.getElementById('form-name').value,
-    botanical_name: editingPlantId ? (plants.find(p => p.id === editingPlantId)?.botanical_name ?? null) : null,
+    botanical_name: existing ? (existing.botanical_name || null) : null,
     emoji: document.getElementById('form-emoji').value || '🪴',
     status: document.getElementById('form-status').value,
     sunlight: document.getElementById('form-sunlight').value,
