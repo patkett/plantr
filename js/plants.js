@@ -68,7 +68,7 @@ function renderPlantList() {
       : '';
 
     return `
-      <div class="bg-white rounded-2xl p-4 border ${isDeceased ? 'border-stone-300 opacity-80' : 'border-stone-200/80'} shadow-xs hover:shadow-md transition-all flex flex-col justify-between space-y-3">
+      <div class="${isWishlist ? 'bg-purple-50/60 border-purple-100' : 'bg-white'} rounded-2xl p-4 border ${isDeceased ? 'border-stone-300 opacity-80' : isWishlist ? '' : 'border-stone-200/80'} shadow-xs hover:shadow-md transition-all flex flex-col justify-between space-y-3">
         <div class="flex items-start justify-between">
           <div class="flex items-start space-x-3">
             <div class="w-12 h-12 rounded-2xl bg-stone-100 flex items-center justify-center text-2xl border border-stone-200/60 shrink-0">
@@ -77,7 +77,7 @@ function renderPlantList() {
             <div>
               <div class="flex items-center gap-2">
                 <h3 class="font-bold text-stone-800 text-sm leading-tight">${plant.name}</h3>
-                ${plant.status === 'wishlist' ? `<span class="px-2 py-0.5 text-[9px] bg-purple-100 text-purple-700 font-semibold rounded-full border border-purple-200">Wunschliste</span>${plant.wished_by ? `<span class="px-2 py-0.5 text-[9px] ${plant.wished_by === 'Sandra' ? 'bg-rose-100 text-rose-700 border-rose-200' : 'bg-sky-100 text-sky-700 border-sky-200'} font-semibold rounded-full border">${plant.wished_by}</span>` : ''}` : ''}
+                ${plant.status === 'wishlist' ? `<span class="px-2 py-0.5 text-[9px] bg-purple-100 text-purple-700 font-semibold rounded-full border border-purple-200">Wunsch</span>` : ''}
                 ${isDeceased ? '<span class="px-2 py-0.5 text-[9px] bg-stone-200 text-stone-700 font-semibold rounded-full border border-stone-300">🪦 Verstorben</span>' : ''}
               </div>
               <p class="text-[11px] text-stone-500 font-medium mt-1">${t(plant.category || 'Perennial')}</p>
@@ -87,9 +87,6 @@ function renderPlantList() {
           <div class="flex items-center space-x-1">
             <button onclick="openPlantModal('${plant.id}')" title="Pflanze bearbeiten" class="p-1.5 text-stone-400 hover:text-brand-700 hover:bg-stone-100 rounded-lg transition-colors">
               <i data-lucide="edit-3" class="w-4 h-4"></i>
-            </button>
-            <button onclick="deletePlant('${plant.id}')" title="Pflanze löschen" class="p-1.5 text-stone-400 hover:text-red-600 hover:bg-stone-100 rounded-lg transition-colors">
-              <i data-lucide="trash-2" class="w-4 h-4"></i>
             </button>
           </div>
         </div>
@@ -227,7 +224,9 @@ function openPlantModal(plantId = null) {
     document.getElementById('form-soil').value = plant.soil || 'Well-Drained';
     document.getElementById('form-category').value = plant.category || 'Perennial';
     document.getElementById('form-notes').value = plant.notes || '';
+    document.getElementById('btn-modal-delete-plant').classList.remove('hidden');
   } else {
+    document.getElementById('btn-modal-delete-plant').classList.add('hidden');
     title.innerText = 'Neue Pflanze hinzufügen';
     form.reset();
     document.getElementById('plant-id').value = '';
@@ -309,6 +308,13 @@ async function handlePlantFormSubmit(e) {
   renderPlantList();
   renderMap();
   closePlantModal();
+}
+
+function deletePlantFromModal() {
+  const plantId = document.getElementById('plant-id').value;
+  if (!plantId) return;
+  closePlantModal();
+  deletePlant(plantId);
 }
 
 function deletePlant(plantId) {
