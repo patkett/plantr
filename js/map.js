@@ -74,7 +74,7 @@ function renderMap() {
             </div>
           ` : ''}
 
-          <div class="w-10 h-10 rounded-2xl shadow-md border-2 border-stone-900 ${isSelected ? 'bg-amber-300 marker-active' : (hasSunMismatch ? 'bg-red-300' : 'bg-white')} flex items-center justify-center text-xl transition-transform transform group-hover:scale-110">
+          <div class="w-10 h-10 rounded-2xl bg-white shadow-md border-2 ${isSelected ? 'border-brand-600 marker-active' : (hasSunMismatch ? 'border-amber-400' : 'border-stone-300')} flex items-center justify-center text-xl transition-transform transform group-hover:scale-110">
             ${plant.emoji || '🪴'}
           </div>
           <span class="mt-1 px-2 py-0.5 bg-stone-900/80 text-white text-[10px] font-medium rounded-full shadow-md whitespace-nowrap pointer-events-none">
