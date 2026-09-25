@@ -24,7 +24,8 @@ const LABELS_DE = {
   'Tree': 'Baum',
   'Succulent': 'Sukkulente',
   'garden': 'Im Garten',
-  'wishlist': 'Wunschliste'
+  'wishlist': 'Wunschliste',
+  'deceased': 'Verstorben'
 };
 
 function t(value) {

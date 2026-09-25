@@ -47,7 +47,7 @@ function renderPlantList() {
     return;
   }
 
-  container.innerHTML = filtered.map(plant => {
+  const renderCard = (plant) => {
     const lightBadgeColor = plant.sunlight === 'Full Sun'
       ? 'bg-amber-100 text-amber-800 border-amber-300'
       : plant.sunlight === 'Partial Shade'
@@ -56,9 +56,11 @@ function renderPlantList() {
 
     const isMapped = plant.x_pos !== null && plant.y_pos !== null;
     const bed = zones.find(z => z.id === plant.bed_id);
+    const isDeceased = plant.status === 'deceased';
+    const diedDate = plant.died_at ? new Date(plant.died_at).toLocaleDateString('de-DE') : null;
 
     return `
-      <div class="bg-white rounded-2xl p-4 border border-stone-200/80 shadow-xs hover:shadow-md transition-all flex flex-col justify-between space-y-3">
+      <div class="bg-white rounded-2xl p-4 border ${isDeceased ? 'border-stone-300 opacity-80' : 'border-stone-200/80'} shadow-xs hover:shadow-md transition-all flex flex-col justify-between space-y-3">
         <div class="flex items-start justify-between">
           <div class="flex items-start space-x-3">
             <div class="w-12 h-12 rounded-2xl bg-stone-100 flex items-center justify-center text-2xl border border-stone-200/60 shrink-0">
@@ -68,6 +70,7 @@ function renderPlantList() {
               <div class="flex items-center gap-2">
                 <h3 class="font-bold text-stone-800 text-sm leading-tight">${plant.name}</h3>
                 ${plant.status === 'wishlist' ? '<span class="px-2 py-0.5 text-[9px] bg-purple-100 text-purple-700 font-semibold rounded-full border border-purple-200">Wunschliste</span>' : ''}
+                ${isDeceased ? '<span class="px-2 py-0.5 text-[9px] bg-stone-200 text-stone-700 font-semibold rounded-full border border-stone-300">🪦 Verstorben</span>' : ''}
               </div>
               <p class="text-[11px] text-stone-500 font-medium mt-1">${t(plant.category || 'Perennial')}</p>
             </div>
@@ -97,9 +100,10 @@ function renderPlantList() {
           ${bed ? `<span class="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">🏡 ${bed.name}</span>` : ''}
         </div>
 
+        ${isDeceased ? `<p class="text-xs text-stone-600 bg-stone-100 p-2.5 rounded-xl border border-stone-200 leading-relaxed">🪦 Verstorben${plant.died_in_bed ? ` im Beet <strong>${plant.died_in_bed}</strong>` : ''}${plant.died_bed_sunlight ? ` (${t(plant.died_bed_sunlight)})` : ''}${diedDate ? ` am ${diedDate}` : ''}</p>` : ''}
         ${plant.notes ? `<p class="text-xs text-stone-600 bg-stone-50 p-2.5 rounded-xl border border-stone-200/60 leading-relaxed">${plant.notes}</p>` : ''}
 
-        <div class="pt-1 flex items-center justify-between border-t border-stone-100">
+        ${isDeceased ? '' : `<div class="pt-1 flex items-center justify-between border-t border-stone-100">
           <span class="text-[11px] font-medium ${isMapped ? 'text-emerald-700' : 'text-stone-400'} flex items-center gap-1">
             <i data-lucide="${isMapped ? 'check-circle' : 'circle-dashed'}" class="w-3.5 h-3.5"></i>
             ${isMapped ? 'Auf Karte platziert' : 'Nicht auf Karte'}
@@ -108,12 +112,55 @@ function renderPlantList() {
             <span>${isMapped ? 'Auf Karte ansehen' : 'Auf Karte platzieren'}</span>
             <i data-lucide="arrow-right" class="w-3 h-3"></i>
           </button>
-        </div>
+        </div>`}
       </div>
     `;
-  }).join('');
+  };
+
+  const living = filtered.filter(p => p.status !== 'deceased');
+  const deceased = filtered.filter(p => p.status === 'deceased');
+  let html = living.map(renderCard).join('');
+  if (deceased.length > 0) {
+    if (living.length > 0) {
+      html += `<div class="flex items-center gap-2 pt-2 text-[11px] font-bold uppercase tracking-wider text-stone-500"><span>🪦 Verstorben (${deceased.length})</span><div class="flex-1 h-px bg-stone-200"></div></div>`;
+    }
+    html += deceased.map(renderCard).join('');
+  }
+  container.innerHTML = html;
 
   lucide.createIcons();
+}
+
+// Marks a plant as deceased, remembering the bed (and its light conditions)
+// it died in, and removes it from the map.
+async function markPlantDeceased(plantId) {
+  const plant = plants.find(p => p.id === plantId);
+  if (!plant) return;
+  const bed = zones.find(z => z.id === plant.bed_id);
+  plant.status = 'deceased';
+  plant.died_in_bed = bed ? bed.name : (plant.died_in_bed || null);
+  plant.died_bed_sunlight = bed ? bed.sunlight : (plant.died_bed_sunlight || null);
+  plant.died_at = new Date().toISOString();
+  plant.x_pos = null;
+  plant.y_pos = null;
+  plant.bed_id = null;
+  await syncSavePlant(plant);
+  if (typeof selectedPlantId !== 'undefined' && selectedPlantId === plantId) closeSelectedBar();
+  renderPlantList();
+  renderMap();
+  showToast(`${plant.name} als verstorben markiert${bed ? ` (Beet: ${bed.name})` : ''}`, '🪦');
+}
+
+function confirmMarkDeceased(plantId) {
+  const plant = plants.find(p => p.id === plantId);
+  if (!plant) return;
+  const bed = zones.find(z => z.id === plant.bed_id);
+  showConfirmDialog(
+    'Pflanze als verstorben markieren?',
+    `"${plant.name}" wird von der Karte entfernt${bed ? ` und das Beet "${bed.name}" als Sterbeort festgehalten` : ''}.`,
+    () => markPlantDeceased(plantId),
+    'Als verstorben markieren'
+  );
 }
 
 // --- PLANT MODAL HANDLERS ---
@@ -168,8 +215,28 @@ async function handlePlantFormSubmit(e) {
     notes: document.getElementById('form-notes').value,
     x_pos: existing ? existing.x_pos : null,
     y_pos: existing ? existing.y_pos : null,
-    bed_id: existing ? existing.bed_id : null
+    bed_id: existing ? existing.bed_id : null,
+    died_in_bed: existing ? existing.died_in_bed || null : null,
+    died_bed_sunlight: existing ? existing.died_bed_sunlight || null : null,
+    died_at: existing ? existing.died_at || null : null
   };
+
+  if (plantData.status === 'deceased') {
+    if (!existing || existing.status !== 'deceased') {
+      const bed = existing ? zones.find(z => z.id === existing.bed_id) : null;
+      plantData.died_in_bed = bed ? bed.name : null;
+      plantData.died_bed_sunlight = bed ? bed.sunlight : null;
+      plantData.died_at = new Date().toISOString();
+    }
+    plantData.x_pos = null;
+    plantData.y_pos = null;
+    plantData.bed_id = null;
+  } else if (existing && existing.status === 'deceased') {
+    // Revived / corrected: clear the death record
+    plantData.died_in_bed = null;
+    plantData.died_bed_sunlight = null;
+    plantData.died_at = null;
+  }
 
   if (id) {
     const idx = plants.findIndex(p => p.id === id);
