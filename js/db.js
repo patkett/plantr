@@ -36,6 +36,8 @@ function updateDbStatusUI(connected) {
   const dot = document.getElementById('db-status-dot');
   const badge = document.getElementById('card-db-status-badge');
   const dotBase = "absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 border-brand-900";
+  const banner = document.getElementById('offline-banner');
+  if (banner) banner.classList.toggle('hidden', connected);
 
   if (connected) {
     dot.className = `${dotBase} bg-emerald-400 animate-pulse`;

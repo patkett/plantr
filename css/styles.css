@@ -59,3 +59,6 @@ body {
 .user-half { background: transparent; }
 .user-half:focus-visible { outline: none; }
 #btn-user-chip { background-repeat: no-repeat; }
+
+/* Pull-to-refresh: keep the browser's native bounce from interfering */
+#plant-list-scroll { overscroll-behavior-y: contain; }
