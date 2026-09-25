@@ -34,17 +34,17 @@ async function testSupabaseConnection() {
 function updateDbStatusUI(connected) {
   isConnectedToSupabase = connected;
   const dot = document.getElementById('db-status-dot');
-  const text = document.getElementById('db-status-text');
   const badge = document.getElementById('card-db-status-badge');
+  const dotBase = "absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 border-brand-900";
 
   if (connected) {
-    dot.className = "w-2 h-2 rounded-full bg-emerald-400 animate-pulse";
-    text.innerText = "Supabase verbunden";
+    dot.className = `${dotBase} bg-emerald-400 animate-pulse`;
+    dot.title = "Supabase verbunden";
     badge.className = "px-2.5 py-1 bg-emerald-100 text-emerald-800 border border-emerald-200 text-[10px] font-bold rounded-full";
     badge.innerText = "Cloud-Sync aktiv";
   } else {
-    dot.className = "w-2 h-2 rounded-full bg-amber-400";
-    text.innerText = "Lokaler Modus";
+    dot.className = `${dotBase} bg-amber-400`;
+    dot.title = "Lokaler Modus";
     badge.className = "px-2.5 py-1 bg-amber-100 text-amber-800 border border-amber-200 text-[10px] font-bold rounded-full";
     badge.innerText = "Nur lokaler Speicher";
   }
@@ -120,9 +120,37 @@ async function fetchAllData() {
     plants = storedPlants ? JSON.parse(storedPlants) : DEFAULT_PLANTS;
     zones = storedZones ? JSON.parse(storedZones) : DEFAULT_ZONES;
 
-    if (!storedPlants) savePlantsLocal();
-    if (!storedZones) saveZonesLocal();
+    const migrated = migrateLegacySeedData();
+    if (!storedPlants || migrated) savePlantsLocal();
+    if (!storedZones || migrated) saveZonesLocal();
   }
+}
+
+// Earlier versions seeded LocalStorage with English sample records. Replace
+// the display text of those untouched seed records with the current German
+// defaults so returning visitors don't see a mixed-language UI.
+const LEGACY_SEED_TEXT = {
+  p1: { name: 'Lavender (Munstead)', notes: 'Needs plenty of direct sun and light watering. Great for pollinators.' },
+  p2: { name: 'Japanese Forest Grass', notes: 'Flowing golden-green foliage. Beautiful in shady borders.' },
+  p3: { name: 'Hostas (Empress Wu)', notes: 'Keep soil consistently damp. Watch for garden slugs.' },
+  p4: { name: 'Sun Gold Cherry Tomato', notes: 'Plan for tomato cage support along south deck.' },
+  z1: { name: 'South Sun Deck Bed' },
+  z2: { name: 'Patio Partial Shade Border' },
+  z3: { name: 'North Fence Shade Nook' }
+};
+
+function migrateLegacySeedData() {
+  let changed = false;
+  const apply = (record, defaults) => {
+    const legacy = LEGACY_SEED_TEXT[record.id];
+    const fresh = defaults.find(d => d.id === record.id);
+    if (!legacy || !fresh) return;
+    if (record.name === legacy.name) { record.name = fresh.name; changed = true; }
+    if (legacy.notes !== undefined && record.notes === legacy.notes) { record.notes = fresh.notes; changed = true; }
+  };
+  plants.forEach(p => apply(p, DEFAULT_PLANTS));
+  zones.forEach(z => apply(z, DEFAULT_ZONES));
+  return changed;
 }
 
 function savePlantsLocal() {
