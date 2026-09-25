@@ -45,3 +45,12 @@ body {
 .marker-active {
   animation: pulse-ring 2s infinite;
 }
+
+/* Let JS fully own gesture handling here so custom drag/pan/pinch-zoom
+   don't fight with the browser's native touch scrolling/zooming. */
+#map-viewport,
+#garden-canvas,
+[data-plant-id],
+.zone-resize-handle {
+  touch-action: none;
+}

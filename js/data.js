@@ -5,7 +5,7 @@
 const DEFAULT_PLANTS = [
   {
     id: 'p1',
-    name: 'Lavender (Munstead)',
+    name: 'Lavendel (Munstead)',
     botanical_name: 'Lavandula angustifolia',
     emoji: '🪻',
     status: 'garden',
@@ -13,14 +13,14 @@ const DEFAULT_PLANTS = [
     water: 'Low',
     soil: 'Well-Drained',
     category: 'Perennial',
-    notes: 'Needs plenty of direct sun and light watering. Great for pollinators.',
+    notes: 'Braucht viel direkte Sonne und wenig Wasser. Gut für Bestäuber.',
     x_pos: 120,
     y_pos: 110,
     bed_id: 'z1'
   },
   {
     id: 'p2',
-    name: 'Japanese Forest Grass',
+    name: 'Japanisches Waldgras',
     botanical_name: 'Hakonechloa macra',
     emoji: '🌾',
     status: 'garden',
@@ -28,14 +28,14 @@ const DEFAULT_PLANTS = [
     water: 'Moderate',
     soil: 'Moist & Rich',
     category: 'Perennial',
-    notes: 'Flowing golden-green foliage. Beautiful in shady borders.',
+    notes: 'Fließendes goldgrünes Laub. Wunderschön in schattigen Beeten.',
     x_pos: 520,
     y_pos: 130,
     bed_id: 'z2'
   },
   {
     id: 'p3',
-    name: 'Hostas (Empress Wu)',
+    name: 'Funkien (Empress Wu)',
     botanical_name: 'Hosta hybrid',
     emoji: '🍃',
     status: 'garden',
@@ -43,14 +43,14 @@ const DEFAULT_PLANTS = [
     water: 'Moderate',
     soil: 'Moist & Rich',
     category: 'Perennial',
-    notes: 'Keep soil consistently damp. Watch for garden slugs.',
+    notes: 'Boden gleichmäßig feucht halten. Auf Schnecken achten.',
     x_pos: 550,
     y_pos: 400,
     bed_id: 'z3'
   },
   {
     id: 'p4',
-    name: 'Sun Gold Cherry Tomato',
+    name: 'Sun Gold Cherrytomate',
     botanical_name: 'Solanum lycopersicum',
     emoji: '🍅',
     status: 'wishlist',
@@ -58,7 +58,7 @@ const DEFAULT_PLANTS = [
     water: 'High',
     soil: 'Moist & Rich',
     category: 'Vegetable',
-    notes: 'Plan for tomato cage support along south deck.',
+    notes: 'Tomatenstab entlang der Südterrasse einplanen.',
     x_pos: null,
     y_pos: null,
     bed_id: null
@@ -68,7 +68,7 @@ const DEFAULT_PLANTS = [
 const DEFAULT_ZONES = [
   {
     id: 'z1',
-    name: 'South Sun Deck Bed',
+    name: 'Südterrassenbeet',
     sunlight: 'Full Sun',
     x: 50,
     y: 50,
@@ -77,7 +77,7 @@ const DEFAULT_ZONES = [
   },
   {
     id: 'z2',
-    name: 'Patio Partial Shade Border',
+    name: 'Terrassenbeet Teilschatten',
     sunlight: 'Partial Shade',
     x: 450,
     y: 50,
@@ -86,7 +86,7 @@ const DEFAULT_ZONES = [
   },
   {
     id: 'z3',
-    name: 'North Fence Shade Nook',
+    name: 'Schattenecke Nordzaun',
     sunlight: 'Full Shade',
     x: 450,
     y: 330,

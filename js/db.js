@@ -39,14 +39,14 @@ function updateDbStatusUI(connected) {
 
   if (connected) {
     dot.className = "w-2 h-2 rounded-full bg-emerald-400 animate-pulse";
-    text.innerText = "Supabase Connected";
+    text.innerText = "Supabase verbunden";
     badge.className = "px-2.5 py-1 bg-emerald-100 text-emerald-800 border border-emerald-200 text-[10px] font-bold rounded-full";
-    badge.innerText = "Cloud Sync Active";
+    badge.innerText = "Cloud-Sync aktiv";
   } else {
     dot.className = "w-2 h-2 rounded-full bg-amber-400";
-    text.innerText = "Local Storage Mode";
+    text.innerText = "Lokaler Modus";
     badge.className = "px-2.5 py-1 bg-amber-100 text-amber-800 border border-amber-200 text-[10px] font-bold rounded-full";
-    badge.innerText = "Local Storage Only";
+    badge.innerText = "Nur lokaler Speicher";
   }
 }
 
@@ -56,7 +56,7 @@ async function handleSaveDbSettings(e) {
   const key = document.getElementById('db-input-key').value.trim();
 
   if (!url || !key) {
-    showToast("Please enter both URL and Anon Key", "⚠️");
+    showToast("Bitte URL und Anon Key eingeben", "⚠️");
     return;
   }
 
@@ -68,13 +68,13 @@ async function handleSaveDbSettings(e) {
 
   if (connected) {
     updateDbStatusUI(true);
-    showToast("Connected to Supabase!", "⚡");
+    showToast("Mit Supabase verbunden!", "⚡");
     await fetchAllData();
     renderPlantList();
     renderMap();
   } else {
     updateDbStatusUI(false);
-    showToast("Could not connect to Supabase. Check URL/Key or run SQL script.", "❌");
+    showToast("Verbindung zu Supabase fehlgeschlagen. URL/Key prüfen oder SQL-Skript ausführen.", "❌");
   }
 }
 
@@ -85,7 +85,7 @@ function disconnectSupabase() {
   document.getElementById('db-input-url').value = '';
   document.getElementById('db-input-key').value = '';
   updateDbStatusUI(false);
-  showToast("Disconnected from Supabase. Switched to LocalStorage.", "🔌");
+  showToast("Von Supabase getrennt. Zurück zum lokalen Speicher.", "🔌");
   fetchAllData().then(() => {
     renderPlantList();
     renderMap();
