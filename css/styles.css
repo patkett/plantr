@@ -54,3 +54,9 @@ body {
 .zone-resize-handle {
   touch-action: none;
 }
+
+/* User select: illustration split into two tappable halves */
+.user-half { background: linear-gradient(to top, rgba(28,25,23,0.55), rgba(28,25,23,0) 45%); }
+.user-half:hover, .user-half:focus-visible { background: linear-gradient(to top, rgba(28,25,23,0.6), rgba(255,255,255,0.12) 45%); outline: none; }
+.user-half + .user-half { border-left: 1px solid rgba(255,255,255,0.35); }
+#btn-user-chip { background-repeat: no-repeat; }
