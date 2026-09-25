@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-stone-50">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Verdant - Garden Planner & Supabase Database</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Supabase JS Client v2 CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
+  <!-- Google Fonts: Inter & Playfair Display -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,600;1,400&display=swap" rel="stylesheet">
+
+  <script src="js/tailwind-config.js"></script>
+
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+
+<body class="h-full flex flex-col font-sans text-stone-800 bg-stone-100 antialiased overflow-hidden select-none">
+
+  <header class="bg-brand-900 text-stone-100 px-4 py-3 shadow-md z-30 flex items-center justify-between shrink-0">
+    <div class="flex items-center space-x-2.5">
+      <div class="p-1.5 bg-brand-700/60 rounded-lg text-emerald-300 border border-brand-600/50">
+        <i data-lucide="sprout" class="w-6 h-6"></i>
+      </div>
+      <div>
+        <h1 class="font-serif font-bold text-lg tracking-tight leading-none text-white">Verdant</h1>
+        <p class="text-[10px] text-brand-300 font-medium tracking-wide uppercase mt-0.5">Garden Planner & Supabase DB</p>
+      </div>
+    </div>
+
+    <!-- DB Status & Quick Stats -->
+    <div class="flex items-center space-x-2 text-xs">
+      <!-- Supabase Connection Indicator Button -->
+      <button onclick="switchTab('db')" id="btn-header-db-status" class="px-2.5 py-1 bg-brand-800/80 hover:bg-brand-800 rounded-full text-stone-300 border border-brand-700/60 flex items-center gap-1.5 transition-all">
+        <span id="db-status-dot" class="w-2 h-2 rounded-full bg-amber-400"></span>
+        <span id="db-status-text" class="text-[11px] font-medium">Local Mode</span>
+      </button>
+
+      <button id="btn-open-add-modal" onclick="openPlantModal()" class="flex items-center space-x-1.5 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white text-xs font-semibold px-3 py-2 rounded-lg shadow-sm transition-all active:scale-95">
+        <i data-lucide="plus" class="w-4 h-4"></i>
+        <span class="hidden sm:inline">Add Plant</span>
+      </button>
+    </div>
+  </header>
+
+  <main class="flex-1 relative overflow-hidden flex flex-col">
+
+    <section id="view-directory" class="flex-1 flex flex-col h-full overflow-hidden bg-stone-100">
+      
+      <!-- Filters and Search Header -->
+      <div class="bg-white border-b border-stone-200 px-4 py-3 shadow-xs space-y-3 z-10 shrink-0">
+        
+        <!-- Search & Status Select -->
+        <div class="flex items-center gap-2">
+          <div class="relative flex-1">
+            <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-stone-400"></i>
+            <input type="text" id="input-search" oninput="renderPlantList()" placeholder="Search plant name, species, category..." class="w-full pl-9 pr-3 py-2 text-xs bg-stone-100 border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:bg-white transition-all">
+          </div>
+          
+          <select id="select-status-filter" onchange="renderPlantList()" class="bg-stone-100 border border-stone-200 text-stone-700 text-xs rounded-xl px-3 py-2 font-medium focus:outline-none focus:ring-2 focus:ring-brand-500/50">
+            <option value="all">All Status</option>
+            <option value="garden">In My Garden</option>
+            <option value="wishlist">Wishlist</option>
+          </select>
+        </div>
+
+        <!-- Sunlight & Category Filter Pills -->
+        <div class="flex flex-col gap-2">
+          <!-- Light Filter -->
+          <div class="flex items-center justify-between text-xs overflow-x-auto no-scrollbar gap-2">
+            <span class="text-stone-400 text-[11px] font-medium shrink-0 flex items-center gap-1">
+              <i data-lucide="sun" class="w-3.5 h-3.5"></i> Light:
+            </span>
+            <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0">
+              <button onclick="setLightFilter('all')" id="filter-light-all" class="px-2.5 py-1 rounded-full text-xs font-medium border bg-brand-800 text-white border-brand-800 transition-colors">All</button>
+              <button onclick="setLightFilter('Full Sun')" id="filter-light-sun" class="px-2.5 py-1 rounded-full text-xs font-medium border bg-stone-100 text-stone-600 border-stone-200 hover:bg-stone-200 transition-colors flex items-center gap-1">
+                <span class="w-2 h-2 rounded-full bg-amber-400"></span> Full Sun
+              </button>
+              <button onclick="setLightFilter('Partial Shade')" id="filter-light-partial" class="px-2.5 py-1 rounded-full text-xs font-medium border bg-stone-100 text-stone-600 border-stone-200 hover:bg-stone-200 transition-colors flex items-center gap-1">
+                <span class="w-2 h-2 rounded-full bg-orange-400"></span> Partial Shade
+              </button>
+              <button onclick="setLightFilter('Full Shade')" id="filter-light-shade" class="px-2.5 py-1 rounded-full text-xs font-medium border bg-stone-100 text-stone-600 border-stone-200 hover:bg-stone-200 transition-colors flex items-center gap-1">
+                <span class="w-2 h-2 rounded-full bg-slate-400"></span> Full Shade
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Plant Cards Container -->
+      <div id="plant-cards-container" class="flex-1 overflow-y-auto p-4 space-y-3 pb-24">
+        <!-- Rendered dynamically -->
+      </div>
+    </section>
+
+    <section id="view-map" class="flex-1 flex flex-col h-full overflow-hidden bg-stone-200 relative hidden">
+      
+      <!-- Interactive Toolbar Header for Map -->
+      <div class="bg-white/95 backdrop-blur-md border-b border-stone-300 px-4 py-2.5 z-20 flex items-center justify-between shadow-xs">
+        <div class="flex items-center space-x-2">
+          <span class="text-xs font-semibold text-stone-700 flex items-center gap-1">
+            <i data-lucide="map" class="w-4 h-4 text-brand-600"></i> Garden Canvas
+          </span>
+          <span class="text-[10px] text-stone-400 hidden xs:inline">Drag markers onto garden beds</span>
+        </div>
+
+        <div class="flex items-center space-x-2">
+          <button onclick="openZoneModal()" class="bg-amber-100 hover:bg-amber-200 text-amber-800 text-xs font-medium px-2.5 py-1.5 rounded-lg border border-amber-300/60 flex items-center gap-1 transition-all active:scale-95 shadow-xs">
+            <i data-lucide="layout-grid" class="w-3.5 h-3.5"></i>
+            <span>+ Garden Bed</span>
+          </button>
+          <button onclick="openUnplacedDrawer()" class="bg-brand-600 hover:bg-brand-700 text-white text-xs font-medium px-2.5 py-1.5 rounded-lg shadow-xs flex items-center gap-1 transition-all active:scale-95">
+            <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
+            <span>Place Plant</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Garden Map Scrollable Surface Canvas -->
+      <div id="map-viewport" class="flex-1 overflow-auto relative p-6 grid-pattern flex items-center justify-center cursor-grab active:cursor-grabbing">
+        <!-- Main Interactive Map Bounds Container -->
+        <div id="garden-canvas" class="w-[900px] h-[650px] bg-stone-50 rounded-2xl border-2 border-stone-300 shadow-lg relative overflow-hidden transition-all my-auto shrink-0">
+          
+          <!-- Compass Overlay -->
+          <div class="absolute top-3 right-3 bg-white/80 backdrop-blur rounded-full px-2.5 py-1 text-[10px] font-bold text-stone-500 border border-stone-200 shadow-xs flex items-center gap-1 z-10">
+            <i data-lucide="compass" class="w-3.5 h-3.5 text-brand-600"></i> N
+          </div>
+
+          <!-- Light Conditions Legend Overlay -->
+          <div class="absolute bottom-3 left-3 bg-white/90 backdrop-blur rounded-xl p-2.5 text-[10px] text-stone-600 border border-stone-200 shadow-sm z-10 flex flex-col gap-1.5">
+            <div class="font-bold text-[9px] uppercase tracking-wider text-stone-400 mb-0.5">Light Zones</div>
+            <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-amber-300 border border-amber-500"></span> Full Sun</div>
+            <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-orange-200 border border-orange-400"></span> Partial Shade</div>
+            <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-slate-300 border border-slate-400"></span> Full Shade</div>
+          </div>
+
+          <!-- ZONES & PLANT MARKERS LAYER -->
+          <div id="zones-layer" class="absolute inset-0 pointer-events-auto">
+            <!-- Garden Beds render here dynamically -->
+          </div>
+
+          <div id="markers-layer" class="absolute inset-0 pointer-events-auto z-10">
+            <!-- Plant markers render here dynamically -->
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Quick Selected Item Detail Bar Footer on Map -->
+      <div id="map-selected-bar" class="hidden absolute bottom-20 left-4 right-4 bg-stone-900/90 text-white backdrop-blur-md rounded-2xl p-3 shadow-xl z-20 border border-stone-700 flex items-center justify-between transition-all">
+        <div class="flex items-center space-x-3 overflow-hidden">
+          <div id="selected-item-icon" class="w-10 h-10 rounded-xl bg-brand-700 flex items-center justify-center shrink-0 text-xl">
+            🌱
+          </div>
+          <div class="min-w-0">
+            <h4 id="selected-item-title" class="font-bold text-sm truncate">Rose Bush</h4>
+            <p id="selected-item-subtitle" class="text-xs text-stone-300 truncate">South Border Bed • Full Sun</p>
+          </div>
+        </div>
+        <div class="flex items-center space-x-2 shrink-0">
+          <button id="btn-unmap-item" class="px-2.5 py-1.5 bg-stone-800 hover:bg-stone-700 text-stone-200 text-xs rounded-lg border border-stone-600 flex items-center gap-1">
+            <i data-lucide="minus-circle" class="w-3.5 h-3.5 text-amber-400"></i> Remove From Map
+          </button>
+          <button onclick="closeSelectedBar()" class="p-1.5 text-stone-400 hover:text-white">
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+
+    </section>
+
+    <section id="view-db" class="flex-1 flex flex-col h-full overflow-y-auto bg-stone-100 p-4 pb-24 hidden">
+      <div class="max-w-xl mx-auto w-full space-y-4">
+        
+        <!-- Connection Config Card -->
+        <div class="bg-white p-5 rounded-2xl border border-stone-200 shadow-xs space-y-4">
+          <div class="flex items-center justify-between border-b border-stone-100 pb-3">
+            <div class="flex items-center space-x-2.5">
+              <div class="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                <i data-lucide="database" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <h3 class="font-bold text-stone-800 text-sm">Supabase Database Integration</h3>
+                <p class="text-xs text-stone-400">Sync garden plants & beds directly to your cloud backend</p>
+              </div>
+            </div>
+            <span id="card-db-status-badge" class="px-2.5 py-1 bg-amber-100 text-amber-800 border border-amber-200 text-[10px] font-bold rounded-full">
+              Local Storage
+            </span>
+          </div>
+
+          <form onsubmit="handleSaveDbSettings(event)" class="space-y-3">
+            <div>
+              <label class="block text-xs font-semibold text-stone-600 mb-1">Supabase Project URL</label>
+              <input type="text" id="db-input-url" placeholder="https://xyzcompany.supabase.co" class="w-full px-3 py-2 text-xs border border-stone-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none">
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-stone-600 mb-1">Supabase Anon Key</label>
+              <input type="password" id="db-input-key" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." class="w-full px-3 py-2 text-xs border border-stone-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none">
+            </div>
+
+            <div class="pt-2 flex items-center space-x-2">
+              <button type="submit" class="flex-1 bg-brand-700 hover:bg-brand-800 text-white text-xs font-semibold py-2.5 rounded-xl shadow-xs transition-all flex items-center justify-center gap-1.5">
+                <i data-lucide="save" class="w-4 h-4"></i> Save & Connect Supabase
+              </button>
+              <button type="button" onclick="disconnectSupabase()" class="px-3 py-2.5 border border-stone-300 hover:bg-stone-100 text-stone-600 text-xs font-medium rounded-xl">
+                Disconnect
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Migration & SQL Setup Script Card -->
+        <div class="bg-white p-5 rounded-2xl border border-stone-200 shadow-xs space-y-3">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+              <i data-lucide="code" class="w-4 h-4 text-brand-600"></i>
+              <h4 class="font-bold text-stone-800 text-xs">Supabase SQL Schema Script</h4>
+            </div>
+            <button onclick="copySqlScript()" class="text-xs font-semibold text-brand-700 hover:text-brand-800 flex items-center gap-1 bg-stone-100 px-2.5 py-1 rounded-lg border border-stone-200">
+              <i data-lucide="copy" class="w-3.5 h-3.5"></i> Copy SQL
+            </button>
+          </div>
+          <p class="text-xs text-stone-500 leading-relaxed">
+            Run this script in your Supabase project's <strong class="text-stone-700">SQL Editor</strong> to create the required tables (<code class="text-emerald-700 bg-stone-100 px-1 rounded">plants</code> and <code class="text-emerald-700 bg-stone-100 px-1 rounded">garden_beds</code>) with public access policies.
+          </p>
+
+          <pre id="sql-script-text" class="bg-stone-900 text-stone-200 p-3 rounded-xl text-[10px] font-mono overflow-x-auto leading-relaxed border border-stone-800">Loading SQL schema from sql/schema.sql...</pre>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Mobile Navigation Bar -->
+  <nav class="bg-white border-t border-stone-200 px-6 py-2.5 shrink-0 z-30 shadow-lg">
+    <div class="flex items-center justify-around max-w-sm mx-auto">
+      <button id="nav-btn-directory" onclick="switchTab('directory')" class="flex flex-col items-center text-brand-700 transition-colors">
+        <i data-lucide="list-tree" class="w-5 h-5"></i>
+        <span class="text-[11px] font-medium mt-1">Directory</span>
+      </button>
+
+      <button id="nav-btn-map" onclick="switchTab('map')" class="flex flex-col items-center text-stone-400 hover:text-stone-600 transition-colors">
+        <i data-lucide="map" class="w-5 h-5"></i>
+        <span class="text-[11px] font-medium mt-1">Garden Map</span>
+      </button>
+
+      <button id="nav-btn-db" onclick="switchTab('db')" class="flex flex-col items-center text-stone-400 hover:text-stone-600 transition-colors">
+        <i data-lucide="database" class="w-5 h-5"></i>
+        <span class="text-[11px] font-medium mt-1">Supabase DB</span>
+      </button>
+    </div>
+  </nav>
+
+
+  <!-- MODAL: Add / Edit Plant Form -->
+  <div id="modal-plant-form" class="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-end sm:items-center justify-center hidden transition-opacity">
+    <div class="bg-white w-full sm:max-w-lg rounded-t-3xl sm:rounded-2xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+      
+      <div class="px-5 py-4 border-b border-stone-200 flex items-center justify-between bg-stone-50">
+        <div class="flex items-center gap-2">
+          <i data-lucide="leaf" class="w-5 h-5 text-brand-600"></i>
+          <h3 id="plant-modal-title" class="font-serif font-bold text-lg text-stone-800">Add New Plant</h3>
+        </div>
+        <button onclick="closePlantModal()" class="p-1 rounded-full text-stone-400 hover:bg-stone-200">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <form id="plant-form" onsubmit="handlePlantFormSubmit(event)" class="p-5 space-y-4 overflow-y-auto flex-1">
+        <input type="hidden" id="plant-id" />
+
+        <div class="grid grid-cols-4 gap-3">
+          <div class="col-span-3">
+            <label class="block text-xs font-semibold text-stone-600 mb-1">Plant Name *</label>
+            <input type="text" id="form-name" required placeholder="e.g. Lavender, Japanese Maple" class="w-full px-3 py-2 text-sm border border-stone-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-stone-600 mb-1">Emoji Icon</label>
+            <input type="text" id="form-emoji" maxlength="2" value="🪴" class="w-full text-center px-2 py-2 text-sm border border-stone-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-stone-600 mb-1">Botanical Name</label>
+            <input type="text" id="form-species" placeholder="e.g. Lavandula angustifolia" class="w-full px-3 py-2 text-sm border border-stone-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-stone-600 mb-1">Garden Status</label>
+            <select id="form-status" class="w-full px-3 py-2 text-sm border border-stone-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none bg-white">
+              <option value="garden">In My Garden</option>
+              <option value="wishlist">Wishlist / Want to Buy</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="p-3.5 bg-stone-50 rounded-xl border border-stone-200 space-y-3">
+          <div class="text-xs font-bold text-brand-800 uppercase tracking-wide flex items-center gap-1.5">
+            <i data-lucide="sun-medium" class="w-3.5 h-3.5"></i> Growing Conditions
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label class="block text-[11px] font-medium text-stone-600 mb-1">Sunlight</label>
+              <select id="form-sunlight" class="w-full px-2 py-1.5 text-xs border border-stone-300 rounded-lg bg-white">
+                <option value="Full Sun">Full Sun ☀️</option>
+                <option value="Partial Shade">Partial Shade ⛅</option>
+                <option value="Full Shade">Full Shade ☁️</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-[11px] font-medium text-stone-600 mb-1">Water Need</label>
+              <select id="form-water" class="w-full px-2 py-1.5 text-xs border border-stone-300 rounded-lg bg-white">
+                <option value="Low">Low 💧</option>
+                <option value="Moderate">Moderate 💧💧</option>
+                <option value="High">High 💧💧💧</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-[11px] font-medium text-stone-600 mb-1">Soil Type</label>
+              <select id="form-soil" class="w-full px-2 py-1.5 text-xs border border-stone-300 rounded-lg bg-white">
+                <option value="Well-Drained">Well-Drained</option>
+                <option value="Moist & Rich">Moist & Rich</option>
+                <option value="Sandy / Dry">Sandy / Dry</option>
+                <option value="Clay / Heavy">Clay / Heavy</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-stone-600 mb-1">Category</label>
+          <select id="form-category" class="w-full px-3 py-2 text-sm border border-stone-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none bg-white">
+            <option value="Perennial">Perennial</option>
+            <option value="Annual">Annual</option>
+            <option value="Vegetable">Vegetable</option>
+            <option value="Herb">Herb</option>
+            <option value="Shrub">Shrub</option>
+            <option value="Tree">Tree</option>
+            <option value="Succulent">Succulent</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-stone-600 mb-1">Notes & Care Instructions</label>
+          <textarea id="form-notes" rows="3" placeholder="e.g. Needs afternoon shade. Prune lightly in early spring." class="w-full px-3 py-2 text-sm border border-stone-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none"></textarea>
+        </div>
+
+        <div class="pt-2 flex items-center justify-end space-x-2">
+          <button type="button" onclick="closePlantModal()" class="px-4 py-2 text-xs font-semibold text-stone-600 hover:bg-stone-100 rounded-xl">Cancel</button>
+          <button type="submit" class="px-5 py-2 text-xs font-semibold text-white bg-brand-700 hover:bg-brand-800 rounded-xl shadow-md transition-all active:scale-95">Save Plant</button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: Add Garden Bed -->
+  <div id="modal-zone-form" class="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center hidden">
+    <div class="bg-white w-full max-w-sm rounded-2xl p-5 shadow-2xl mx-4 space-y-4">
+      <div class="flex items-center justify-between border-b border-stone-200 pb-3">
+        <h3 class="font-serif font-bold text-base text-stone-800">Add Garden Bed Zone</h3>
+        <button onclick="closeZoneModal()" class="text-stone-400 hover:text-stone-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+
+      <form id="zone-form" onsubmit="handleZoneFormSubmit(event)" class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-stone-600 mb-1">Bed Name *</label>
+          <input type="text" id="zone-name" required placeholder="e.g. Patio Border, South Deck" class="w-full px-3 py-2 text-xs border border-stone-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-stone-600 mb-1">Assigned Sunlight</label>
+          <select id="zone-light" class="w-full px-3 py-2 text-xs border border-stone-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none bg-white">
+            <option value="Full Sun">Full Sun (6+ hrs sun)</option>
+            <option value="Partial Shade">Partial Shade (3-6 hrs sun)</option>
+            <option value="Full Shade">Full Shade (&lt;3 hrs sun)</option>
+          </select>
+        </div>
+
+        <div class="pt-2 flex justify-end space-x-2">
+          <button type="button" onclick="closeZoneModal()" class="px-3 py-1.5 text-xs text-stone-600">Cancel</button>
+          <button type="submit" class="px-4 py-1.5 text-xs font-semibold bg-brand-700 text-white rounded-lg">Create Bed</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- DRAWER: Pick Unplaced Plant to Place on Map -->
+  <div id="drawer-unplaced" class="fixed inset-x-0 bottom-0 z-40 bg-white border-t border-stone-300 rounded-t-3xl shadow-2xl p-4 transform translate-y-full transition-transform duration-300 max-h-[60vh] flex flex-col">
+    <div class="flex items-center justify-between border-b border-stone-100 pb-2 mb-3">
+      <div class="flex items-center space-x-2">
+        <i data-lucide="map-pin" class="w-4 h-4 text-brand-600"></i>
+        <h3 class="font-bold text-sm text-stone-800">Select Plant to Place on Canvas</h3>
+      </div>
+      <button onclick="closeUnplacedDrawer()" class="p-1 text-stone-400 hover:text-stone-600">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+
+    <div id="unplaced-list" class="flex-1 overflow-y-auto space-y-2 pr-1">
+      <!-- Dynamic unplaced plant list -->
+    </div>
+  </div>
+
+  <!-- In-app Toast Message -->
+  <div id="verdant-toast" class="fixed bottom-16 sm:bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 bg-stone-900 text-white text-xs font-medium rounded-full shadow-2xl flex items-center gap-2 transition-all opacity-0 pointer-events-none transform translate-y-2">
+    <span id="toast-icon">🌿</span>
+    <span id="toast-message">Notification</span>
+  </div>
+
+  <!-- Confirmation Dialog -->
+  <div id="modal-confirm" class="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+    <div class="bg-white w-full max-w-xs rounded-2xl p-5 shadow-2xl text-center space-y-4">
+      <div class="w-12 h-12 rounded-full bg-red-100 text-red-600 mx-auto flex items-center justify-center text-xl">
+        <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+      </div>
+      <div>
+        <h3 id="confirm-title" class="font-bold text-sm text-stone-800">Are you sure?</h3>
+        <p id="confirm-message" class="text-xs text-stone-500 mt-1">This action cannot be undone.</p>
+      </div>
+      <div class="flex items-center justify-center gap-2 pt-1">
+        <button id="btn-confirm-cancel" class="flex-1 py-2 text-xs font-semibold text-stone-600 bg-stone-100 hover:bg-stone-200 rounded-xl">Cancel</button>
+        <button id="btn-confirm-ok" class="flex-1 py-2 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 rounded-xl">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/data.js"></script>
+  <script src="js/state.js"></script>
+  <script src="js/db.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/navigation.js"></script>
+  <script src="js/plants.js"></script>
+  <script src="js/map.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
