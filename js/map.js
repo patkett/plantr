@@ -4,8 +4,8 @@ let mapZoom = 1;
 const MAP_ZOOM_MIN = 0.5;
 const MAP_ZOOM_MAX = 2.5;
 
-let openZoneMenuId = null;   // zone whose edit dropdown is currently open
 let resizingZoneId = null;   // zone currently showing its resize handle
+let editingZoneId = null;    // zone whose edit bar is open
 let activeResizeZoneId = null; // zone actively being dragged/resized
 
 function renderMap() {
@@ -29,19 +29,9 @@ function renderMap() {
           <span class="text-xs font-bold text-stone-700 bg-white/80 backdrop-blur px-2.5 py-1 rounded-lg shadow-xs border border-stone-200/60">
             ${zone.name}
           </span>
-          <div class="relative">
-            <button onclick="toggleZoneMenu(event, '${zone.id}')" title="Beet bearbeiten" class="p-2 bg-white/90 rounded-lg text-stone-600 hover:text-brand-700 shadow-sm border border-stone-200/60 active:scale-95">
-              <i data-lucide="pencil" class="w-4 h-4"></i>
-            </button>
-            <div id="zone-menu-${zone.id}" class="hidden absolute right-0 top-10 z-40 bg-white rounded-xl shadow-lg border border-stone-200 overflow-hidden w-40">
-              <button onclick="startZoneResizeMode(event, '${zone.id}')" class="w-full text-left px-3 py-3 text-xs font-medium text-stone-700 hover:bg-stone-100 flex items-center gap-2">
-                <i data-lucide="move-diagonal-2" class="w-3.5 h-3.5"></i> Größe ändern
-              </button>
-              <button onclick="confirmDeleteZone(event, '${zone.id}')" class="w-full text-left px-3 py-3 text-xs font-medium text-red-600 hover:bg-red-50 flex items-center gap-2 border-t border-stone-100">
-                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Löschen
-              </button>
-            </div>
-          </div>
+          <button onclick="openZoneBar(event, '${zone.id}')" title="Beet bearbeiten" class="p-2 bg-white/90 rounded-lg ${zone.id === editingZoneId ? 'text-brand-700 ring-2 ring-brand-500' : 'text-stone-600'} hover:text-brand-700 shadow-sm border border-stone-200/60 active:scale-95">
+            <i data-lucide="pencil" class="w-4 h-4"></i>
+          </button>
         </div>
         <div class="text-[10px] text-stone-500 font-semibold uppercase tracking-wider bg-white/70 w-max px-2 py-0.5 rounded">
           ${t(zone.sunlight)}-Beet
@@ -71,7 +61,7 @@ function renderMap() {
            style="left: ${plant.x_pos}px; top: ${plant.y_pos}px;"
            onmousedown="startMarkerDrag(event, '${plant.id}')"
            ontouchstart="startMarkerDrag(event, '${plant.id}')"
-           onclick="selectPlantMarker('${plant.id}')"
+           onclick="togglePlantMarker(event, '${plant.id}')"
            class="absolute -translate-x-1/2 -translate-y-1/2 cursor-grab active:cursor-grabbing z-20 group pointer-events-auto">
 
         <div class="relative flex flex-col items-center">
@@ -116,6 +106,7 @@ function startMarkerDrag(e, plantId) {
 
   draggingPlantId = plantId;
   selectedPlantId = plantId;
+  closeZoneBar(false);
   showSelectedBar(plantId);
 
   const clientX = e.touches ? e.touches[0].clientX : e.clientX;
@@ -186,9 +177,20 @@ async function stopMarkerDrag() {
 }
 
 function selectPlantMarker(id) {
+  closeZoneBar(false);
   selectedPlantId = id;
   showSelectedBar(id);
   renderMap();
+}
+
+// Tapping the already-selected marker deselects it
+function togglePlantMarker(e, id) {
+  if (e) e.stopPropagation();
+  if (selectedPlantId === id) {
+    closeSelectedBar();
+  } else {
+    selectPlantMarker(id);
+  }
 }
 
 function showSelectedBar(plantId) {
@@ -278,27 +280,66 @@ async function handleZoneFormSubmit(e) {
   showToast(`Beet "${newZone.name}" erstellt`, '🏡');
 }
 
-// --- ZONE EDIT DROPDOWN (resize / delete) ---
-function toggleZoneMenu(e, zoneId) {
-  e.stopPropagation();
-  if (openZoneMenuId === zoneId) {
-    closeAllZoneMenus();
-    return;
+// --- BED EDIT BAR (dark panel at the bottom, like the plant bar) ---
+function openZoneBar(e, zoneId) {
+  if (e) e.stopPropagation();
+  const zone = zones.find(z => z.id === zoneId);
+  if (!zone) return;
+
+  // Deselect any selected plant first
+  if (selectedPlantId) {
+    selectedPlantId = null;
+    document.getElementById('map-selected-bar').classList.add('hidden');
   }
-  closeAllZoneMenus();
-  openZoneMenuId = zoneId;
-  const menu = document.getElementById(`zone-menu-${zoneId}`);
-  if (menu) menu.classList.remove('hidden');
+  resizingZoneId = null;
+  editingZoneId = zoneId;
+
+  const count = plants.filter(p => p.bed_id === zoneId).length;
+  document.getElementById('zone-bar-subtitle').innerText =
+    `${zone.name} • ${count} Pflanze${count === 1 ? '' : 'n'} in diesem Beet`;
+
+  const nameInput = document.getElementById('zone-bar-name');
+  const lightSelect = document.getElementById('zone-bar-light');
+  nameInput.value = zone.name;
+  lightSelect.value = zone.sunlight;
+  nameInput.onchange = () => saveZoneBarChanges();
+  lightSelect.onchange = () => saveZoneBarChanges();
+
+  document.getElementById('btn-zone-resize').onclick = (ev) => startZoneResizeMode(ev, zoneId);
+  document.getElementById('btn-zone-delete').onclick = (ev) => confirmDeleteZone(ev, zoneId);
+
+  document.getElementById('map-zone-bar').classList.remove('hidden');
+  renderMap();
 }
 
-function closeAllZoneMenus() {
-  document.querySelectorAll('[id^="zone-menu-"]').forEach(m => m.classList.add('hidden'));
-  openZoneMenuId = null;
+async function saveZoneBarChanges() {
+  const zone = zones.find(z => z.id === editingZoneId);
+  if (!zone) return;
+  const name = document.getElementById('zone-bar-name').value.trim();
+  const sunlight = document.getElementById('zone-bar-light').value;
+  if (name) zone.name = name;
+  zone.sunlight = sunlight;
+  await syncSaveZone(zone);
+  const count = plants.filter(p => p.bed_id === zone.id).length;
+  document.getElementById('zone-bar-subtitle').innerText =
+    `${zone.name} • ${count} Pflanze${count === 1 ? '' : 'n'} in diesem Beet`;
+  renderMap();
+  renderPlantList();
 }
+
+function closeZoneBar(rerender = true) {
+  const bar = document.getElementById('map-zone-bar');
+  if (bar) bar.classList.add('hidden');
+  editingZoneId = null;
+  if (rerender) renderMap();
+}
+
+// Kept for backwards compatibility with older markup
+function closeAllZoneMenus() {}
 
 function startZoneResizeMode(e, zoneId) {
-  e.stopPropagation();
-  closeAllZoneMenus();
+  if (e) e.stopPropagation();
+  closeZoneBar(false); // give the map maximum space while resizing
   resizingZoneId = zoneId;
   renderMap();
   showToast('Ziehe die Ecke unten rechts, um die Größe zu ändern', '📐');
@@ -376,7 +417,6 @@ async function stopZoneResize() {
 // --- ZONE DELETE (double-confirms when plants are placed inside) ---
 function confirmDeleteZone(e, zoneId) {
   if (e) e.stopPropagation();
-  closeAllZoneMenus();
 
   const zone = zones.find(z => z.id === zoneId);
   const zoneName = zone ? zone.name : 'dieses Beet';
@@ -420,6 +460,7 @@ async function executeDeleteZone(zoneId, affectedPlants) {
   await syncDeleteZone(zoneId);
 
   if (resizingZoneId === zoneId) resizingZoneId = null;
+  if (editingZoneId === zoneId) closeZoneBar(false);
   if (selectedPlantId && affectedPlants.some(p => p.id === selectedPlantId)) {
     closeSelectedBar();
   }
@@ -518,7 +559,8 @@ function isInteractiveMapTarget(target) {
   return !!(
     target.closest('[data-plant-id]') ||
     target.closest('.zone-resize-handle') ||
-    target.closest('[id^="zone-menu-"]') ||
+    target.closest('#map-selected-bar') ||
+    target.closest('#map-zone-bar') ||
     target.closest('button')
   );
 }
@@ -613,11 +655,32 @@ function initMapInteractions() {
 
   viewport.addEventListener('wheel', handleViewportWheel, { passive: false });
 
-  document.addEventListener('click', (e) => {
-    closeAllZoneMenus();
-    if (resizingZoneId && !e.target.closest('.zone-resize-handle')) {
-      resizingZoneId = null;
-      renderMap();
+  // A tap (not a drag) on empty map space deselects plant / closes bed bar / ends resize mode
+  let tapStartX = 0, tapStartY = 0;
+  const rememberTapStart = (x, y) => { tapStartX = x; tapStartY = y; };
+  viewport.addEventListener('mousedown', (e) => rememberTapStart(e.clientX, e.clientY));
+  viewport.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 1) rememberTapStart(e.touches[0].clientX, e.touches[0].clientY);
+  }, { passive: true });
+
+  const handleEmptyTap = (x, y, target) => {
+    if (Math.abs(x - tapStartX) > 8 || Math.abs(y - tapStartY) > 8) return; // it was a drag
+    if (isInteractiveMapTarget(target)) return;
+    let changed = false;
+    if (resizingZoneId) { resizingZoneId = null; changed = true; }
+    if (editingZoneId) { closeZoneBar(false); changed = true; }
+    if (selectedPlantId) {
+      selectedPlantId = null;
+      document.getElementById('map-selected-bar').classList.add('hidden');
+      changed = true;
+    }
+    if (changed) renderMap();
+  };
+  viewport.addEventListener('click', (e) => handleEmptyTap(e.clientX, e.clientY, e.target));
+  viewport.addEventListener('touchend', (e) => {
+    if (e.changedTouches.length === 1 && e.touches.length === 0) {
+      const tch = e.changedTouches[0];
+      handleEmptyTap(tch.clientX, tch.clientY, e.target);
     }
   });
 }
