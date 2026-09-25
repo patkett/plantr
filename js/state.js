@@ -7,4 +7,4 @@ let plants = [];
 let zones = [];
 let activeTab = 'directory';
 let lightFilter = 'all';
-let selectedPlantId = null;
+let selectedPlacementId = null; // marker (placement) currently selected on the map

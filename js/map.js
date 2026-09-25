@@ -50,19 +50,21 @@ function renderMap() {
   }).join('');
 
   // 2. Render Plant Markers on Canvas
-  const mappedPlants = plants.filter(p => p.x_pos !== null && p.y_pos !== null);
-  markersLayer.innerHTML = mappedPlants.map(plant => {
-    const isSelected = plant.id === selectedPlantId;
-    const bed = zones.find(z => z.id === plant.bed_id);
+  const markers = [];
+  plants.forEach(plant => (plant.placements || []).forEach(pl => markers.push({ plant, pl })));
+  markersLayer.innerHTML = markers.map(({ plant, pl }) => {
+    const isSelected = pl.id === selectedPlacementId;
+    const bed = zones.find(z => z.id === pl.bed_id);
     const hasSunMismatch = bed && bed.sunlight !== plant.sunlight;
 
     return `
-      <div id="marker-${plant.id}"
+      <div id="marker-${pl.id}"
            data-plant-id="${plant.id}"
-           style="left: ${plant.x_pos}px; top: ${plant.y_pos}px;"
-           onmousedown="startMarkerDrag(event, '${plant.id}')"
-           ontouchstart="startMarkerDrag(event, '${plant.id}')"
-           onclick="togglePlantMarker(event, '${plant.id}')"
+           data-placement-id="${pl.id}"
+           style="left: ${pl.x}px; top: ${pl.y}px;"
+           onmousedown="startMarkerDrag(event, '${pl.id}')"
+           ontouchstart="startMarkerDrag(event, '${pl.id}')"
+           onclick="togglePlantMarker(event, '${pl.id}')"
            class="absolute -translate-x-1/2 -translate-y-1/2 cursor-grab active:cursor-grabbing z-20 group pointer-events-auto">
 
         <div class="relative flex flex-col items-center">
@@ -97,28 +99,28 @@ function getCanvasPoint(clientX, clientY) {
 }
 
 // --- DRAG & DROP MARKER LOGIC ---
-let draggingPlantId = null;
+let draggingPlacementId = null;
 let dragOffsetX = 0;
 let dragOffsetY = 0;
 
-function startMarkerDrag(e, plantId) {
+function startMarkerDrag(e, placementId) {
   e.stopPropagation();
   if (e.cancelable) e.preventDefault();
 
-  draggingPlantId = plantId;
-  selectedPlantId = plantId;
+  const found = findPlacement(placementId);
+  if (!found) return;
+
+  draggingPlacementId = placementId;
+  selectedPlacementId = placementId;
   closeZoneBar(false);
-  showSelectedBar(plantId);
+  showSelectedBar(placementId);
 
   const clientX = e.touches ? e.touches[0].clientX : e.clientX;
   const clientY = e.touches ? e.touches[0].clientY : e.clientY;
 
-  const plant = plants.find(p => p.id === plantId);
-  if (!plant) return;
-
   const point = getCanvasPoint(clientX, clientY);
-  dragOffsetX = point.x - plant.x_pos;
-  dragOffsetY = point.y - plant.y_pos;
+  dragOffsetX = point.x - found.placement.x;
+  dragOffsetY = point.y - found.placement.y;
 
   window.addEventListener('mousemove', onMarkerDrag);
   window.addEventListener('touchmove', onMarkerDrag, { passive: false });
@@ -127,7 +129,7 @@ function startMarkerDrag(e, plantId) {
 }
 
 function onMarkerDrag(e) {
-  if (!draggingPlantId) return;
+  if (!draggingPlacementId) return;
   if (e.cancelable) e.preventDefault();
 
   const clientX = e.touches ? e.touches[0].clientX : e.clientX;
@@ -140,21 +142,14 @@ function onMarkerDrag(e) {
   newX = Math.max(20, Math.min(880, newX));
   newY = Math.max(20, Math.min(630, newY));
 
-  const plant = plants.find(p => p.id === draggingPlantId);
-  if (plant) {
-    plant.x_pos = newX;
-    plant.y_pos = newY;
+  const found = findPlacement(draggingPlacementId);
+  if (found) {
+    found.placement.x = newX;
+    found.placement.y = newY;
+    found.placement.bed_id = bedIdAt(newX, newY); // auto detect bed underneath
+    syncLegacyPosition(found.plant);
 
-    // Auto detect zone underneath
-    const matchedZone = zones.find(z => {
-      const zw = z.width || z.w || 300;
-      const zh = z.height || z.h || 200;
-      return newX >= z.x && newX <= (z.x + zw) && newY >= z.y && newY <= (z.y + zh);
-    });
-
-    plant.bed_id = matchedZone ? matchedZone.id : null;
-
-    const markerEl = document.getElementById(`marker-${plant.id}`);
+    const markerEl = document.getElementById(`marker-${found.placement.id}`);
     if (markerEl) {
       markerEl.style.left = `${newX}px`;
       markerEl.style.top = `${newY}px`;
@@ -163,12 +158,10 @@ function onMarkerDrag(e) {
 }
 
 async function stopMarkerDrag() {
-  if (draggingPlantId) {
-    const plant = plants.find(p => p.id === draggingPlantId);
-    if (plant) {
-      await syncSavePlant(plant);
-    }
-    draggingPlantId = null;
+  if (draggingPlacementId) {
+    const found = findPlacement(draggingPlacementId);
+    if (found) await syncSavePlant(found.plant);
+    draggingPlacementId = null;
   }
   window.removeEventListener('mousemove', onMarkerDrag);
   window.removeEventListener('touchmove', onMarkerDrag);
@@ -177,32 +170,34 @@ async function stopMarkerDrag() {
   renderMap();
 }
 
-function selectPlantMarker(id) {
+function selectPlantMarker(placementId) {
   closeZoneBar(false);
-  selectedPlantId = id;
-  showSelectedBar(id);
+  selectedPlacementId = placementId;
+  showSelectedBar(placementId);
   renderMap();
 }
 
 // Tapping the already-selected marker deselects it
-function togglePlantMarker(e, id) {
+function togglePlantMarker(e, placementId) {
   if (e) e.stopPropagation();
-  if (selectedPlantId === id) {
+  if (selectedPlacementId === placementId) {
     closeSelectedBar();
   } else {
-    selectPlantMarker(id);
+    selectPlantMarker(placementId);
   }
 }
 
-function showSelectedBar(plantId) {
-  const plant = plants.find(p => p.id === plantId);
-  if (!plant) return;
+function showSelectedBar(placementId) {
+  const found = findPlacement(placementId);
+  if (!found) return;
+  const { plant, placement } = found;
 
   const bar = document.getElementById('map-selected-bar');
   document.getElementById('selected-item-icon').innerText = plant.emoji || '🪴';
-  document.getElementById('selected-item-title').innerText = plant.name;
+  const total = placementCount(plant);
+  document.getElementById('selected-item-title').innerText = total > 1 ? `${plant.name} (${total}×)` : plant.name;
 
-  const zone = zones.find(z => z.id === plant.bed_id);
+  const zone = zones.find(z => z.id === placement.bed_id);
   const zoneText = zone ? zone.name : 'Kein Beet zugewiesen';
 
   const isMismatch = zone && zone.sunlight !== plant.sunlight;
@@ -213,44 +208,46 @@ function showSelectedBar(plantId) {
   document.getElementById('selected-item-subtitle').innerHTML = `${zoneText} • ${t(plant.sunlight)}${mismatchWarning}`;
 
   const unmapBtn = document.getElementById('btn-unmap-item');
-  unmapBtn.onclick = () => unmapPlant(plantId);
+  unmapBtn.onclick = () => unmapPlacement(placementId);
   const deceasedBtn = document.getElementById('btn-deceased-item');
-  if (deceasedBtn) deceasedBtn.onclick = () => confirmMarkDeceased(plantId);
+  if (deceasedBtn) deceasedBtn.onclick = () => confirmMarkPlacementDeceased(placementId);
 
   bar.classList.remove('hidden');
 }
 
 function closeSelectedBar() {
   document.getElementById('map-selected-bar').classList.add('hidden');
-  selectedPlantId = null;
+  selectedPlacementId = null;
   renderMap();
 }
 
-async function unmapPlant(plantId) {
-  const plant = plants.find(p => p.id === plantId);
-  if (plant) {
-    plant.x_pos = null;
-    plant.y_pos = null;
-    plant.bed_id = null;
-    await syncSavePlant(plant);
-    closeSelectedBar();
-    renderMap();
-    renderPlantList();
-    showToast(`${plant.name} von der Karte entfernt`, '📍');
-  }
+// Removes a single specimen from the map
+async function unmapPlacement(placementId) {
+  const found = findPlacement(placementId);
+  if (!found) return;
+  removePlacementFromPlant(found.plant, placementId);
+  await syncSavePlant(found.plant);
+  closeSelectedBar();
+  renderMap();
+  renderPlantList();
+  showToast(`${found.plant.name} von der Karte entfernt`, '📍');
 }
 
+// From the directory: show the first specimen on the map, or place one if none exists.
 function jumpToMapWithPlant(plantId) {
-  switchTab('map');
   const plant = plants.find(p => p.id === plantId);
-  if (plant) {
-    if (plant.x_pos === null || plant.y_pos === null) {
-      plant.x_pos = 450;
-      plant.y_pos = 300;
-      syncSavePlant(plant);
-    }
-    selectPlantMarker(plantId);
+  if (!plant) return;
+  if (!isPlaceable(plant)) {
+    showToast('Wunschlisten-Pflanzen können nicht auf der Karte platziert werden', '🛒');
+    return;
   }
+  switchTab('map');
+  if (placementCount(plant) === 0) {
+    addPlacement(plant);
+    syncSavePlant(plant);
+    renderPlantList();
+  }
+  selectPlantMarker(plant.placements[0].id);
 }
 
 // --- ZONE / BED MODAL HANDLERS ---
@@ -290,14 +287,14 @@ function openZoneBar(e, zoneId) {
   if (!zone) return;
 
   // Deselect any selected plant first
-  if (selectedPlantId) {
-    selectedPlantId = null;
+  if (selectedPlacementId) {
+    selectedPlacementId = null;
     document.getElementById('map-selected-bar').classList.add('hidden');
   }
   resizingZoneId = null;
   editingZoneId = zoneId;
 
-  const count = plants.filter(p => p.bed_id === zoneId).length;
+  const count = placementsInBed(zoneId).length;
   document.getElementById('zone-bar-subtitle').innerText =
     `${zone.name} • ${count} Pflanze${count === 1 ? '' : 'n'} in diesem Beet`;
 
@@ -323,7 +320,7 @@ async function saveZoneBarChanges() {
   if (name) zone.name = name;
   zone.sunlight = sunlight;
   await syncSaveZone(zone);
-  const count = plants.filter(p => p.bed_id === zone.id).length;
+  const count = placementsInBed(zone.id).length;
   document.getElementById('zone-bar-subtitle').innerText =
     `${zone.name} • ${count} Pflanze${count === 1 ? '' : 'n'} in diesem Beet`;
   renderMap();
@@ -372,9 +369,7 @@ function startZoneMove(e, zoneId) {
   moveStartY = point.y;
   moveZoneStartX = zone.x;
   moveZoneStartY = zone.y;
-  movePlantStarts = plants
-    .filter(p => p.bed_id === zoneId && p.x_pos !== null && p.y_pos !== null)
-    .map(p => ({ plant: p, x: p.x_pos, y: p.y_pos }));
+  movePlantStarts = placementsInBed(zoneId);
 
   window.addEventListener('mousemove', onZoneMove);
   window.addEventListener('touchmove', onZoneMove, { passive: false });
@@ -408,13 +403,14 @@ function onZoneMove(e) {
   }
 
   // Plants placed in this bed travel with it
-  movePlantStarts.forEach(({ plant }) => {
-    plant.x_pos += dx;
-    plant.y_pos += dy;
-    const el = document.getElementById(`marker-${plant.id}`);
+  movePlantStarts.forEach(({ plant, placement }) => {
+    placement.x += dx;
+    placement.y += dy;
+    syncLegacyPosition(plant);
+    const el = document.getElementById(`marker-${placement.id}`);
     if (el) {
-      el.style.left = `${plant.x_pos}px`;
-      el.style.top = `${plant.y_pos}px`;
+      el.style.left = `${placement.x}px`;
+      el.style.top = `${placement.y}px`;
     }
   });
 }
@@ -431,7 +427,8 @@ async function stopZoneMove() {
   movingZoneId = null;
   if (zone && moved) {
     await syncSaveZone(zone);
-    for (const { plant } of movePlantStarts) await syncSavePlant(plant);
+    const touched = [...new Set(movePlantStarts.map(m => m.plant))];
+    for (const plant of touched) await syncSavePlant(plant);
   }
   movePlantStarts = [];
   renderMap();
@@ -512,7 +509,7 @@ function confirmDeleteZone(e, zoneId) {
 
   const zone = zones.find(z => z.id === zoneId);
   const zoneName = zone ? zone.name : 'dieses Beet';
-  const affectedPlants = plants.filter(p => p.bed_id === zoneId);
+  const affectedPlants = placementsInBed(zoneId);
 
   if (affectedPlants.length === 0) {
     showConfirmDialog(
@@ -539,13 +536,13 @@ function confirmDeleteZone(e, zoneId) {
   );
 }
 
-async function executeDeleteZone(zoneId, affectedPlants) {
+async function executeDeleteZone(zoneId, affectedPlacements) {
   zones = zones.filter(z => z.id !== zoneId);
 
-  for (const plant of affectedPlants) {
-    plant.x_pos = null;
-    plant.y_pos = null;
-    plant.bed_id = null;
+  const touched = [...new Set(affectedPlacements.map(a => a.plant))];
+  for (const plant of touched) {
+    plant.placements = plant.placements.filter(pl => pl.bed_id !== zoneId);
+    syncLegacyPosition(plant);
     await syncSavePlant(plant);
   }
 
@@ -553,14 +550,14 @@ async function executeDeleteZone(zoneId, affectedPlants) {
 
   if (resizingZoneId === zoneId) resizingZoneId = null;
   if (editingZoneId === zoneId) closeZoneBar(false);
-  if (selectedPlantId && affectedPlants.some(p => p.id === selectedPlantId)) {
+  if (selectedPlacementId && affectedPlacements.some(a => a.placement.id === selectedPlacementId)) {
     closeSelectedBar();
   }
 
   renderMap();
   renderPlantList();
 
-  const count = affectedPlants.length;
+  const count = affectedPlacements.length;
   showToast(
     count > 0
       ? `Beet gelöscht – ${count} Pflanze${count === 1 ? ' muss' : 'n müssen'} neu platziert werden`
@@ -574,29 +571,34 @@ function openUnplacedDrawer() {
   const drawer = document.getElementById('drawer-unplaced');
   const list = document.getElementById('unplaced-list');
 
-  const unplaced = plants.filter(p => p.status !== 'deceased' && (p.x_pos === null || p.y_pos === null));
+  // Wishlist and deceased plants cannot be placed; garden plants can be placed several times.
+  const placeable = plants
+    .filter(isPlaceable)
+    .sort((a, b) => placementCount(a) - placementCount(b) || a.name.localeCompare(b.name, 'de'));
 
-  if (unplaced.length === 0) {
+  if (placeable.length === 0) {
     list.innerHTML = `
       <div class="text-center py-6 text-xs text-stone-500">
-        Alle deine Pflanzen sind bereits auf der Karte platziert!
+        Keine Gartenpflanzen vorhanden. Wunschlisten-Pflanzen lassen sich nicht platzieren.
       </div>
     `;
   } else {
-    list.innerHTML = unplaced.map(p => `
+    list.innerHTML = placeable.map(p => {
+      const n = placementCount(p);
+      return `
       <div class="p-3 bg-stone-50 rounded-xl border border-stone-200 flex items-center justify-between">
         <div class="flex items-center space-x-3">
           <span class="text-2xl">${p.emoji || '🪴'}</span>
           <div>
             <h4 class="font-bold text-xs text-stone-800">${p.name}</h4>
-            <span class="text-[10px] text-stone-500">${t(p.sunlight)} • ${t(p.category || 'Perennial')}</span>
+            <span class="text-[10px] text-stone-500">${t(p.sunlight)} • ${t(p.category || 'Perennial')}${n > 0 ? ` • <span class="text-emerald-700 font-semibold">${n}× auf Karte</span>` : ''}</span>
           </div>
         </div>
-        <button onclick="placePlantOnMap('${p.id}')" class="px-3 py-1.5 bg-brand-700 text-white text-xs font-semibold rounded-lg shadow-xs hover:bg-brand-800 transition-colors">
-          Platzieren
+        <button onclick="placePlantOnMap('${p.id}')" class="px-3 py-1.5 bg-brand-700 text-white text-xs font-semibold rounded-lg shadow-xs hover:bg-brand-800 transition-colors whitespace-nowrap">
+          ${n > 0 ? '+ Weitere' : 'Platzieren'}
         </button>
       </div>
-    `).join('');
+    `; }).join('');
   }
 
   drawer.classList.remove('translate-y-full');
@@ -606,17 +608,21 @@ function closeUnplacedDrawer() {
   document.getElementById('drawer-unplaced').classList.add('translate-y-full');
 }
 
+// Adds another specimen of the plant at the map centre (slightly offset if
+// that spot is already taken by the same plant).
 async function placePlantOnMap(plantId) {
   const plant = plants.find(p => p.id === plantId);
-  if (plant) {
-    plant.x_pos = 450;
-    plant.y_pos = 300;
-    await syncSavePlant(plant);
-    closeUnplacedDrawer();
-    renderMap();
-    selectPlantMarker(plantId);
-    showToast(`${plant.name} auf der Karte platziert`, '📍');
-  }
+  if (!plant || !isPlaceable(plant)) return;
+  const offset = (plant.placements || []).filter(pl => Math.abs(pl.x - MAP_CENTER.x) < 60 && Math.abs(pl.y - MAP_CENTER.y) < 60).length;
+  const placement = addPlacement(plant, MAP_CENTER.x + offset * 30, MAP_CENTER.y + offset * 30);
+  await syncSavePlant(plant);
+  closeUnplacedDrawer();
+  switchTab('map');
+  renderMap();
+  renderPlantList();
+  selectPlantMarker(placement.id);
+  const n = placementCount(plant);
+  showToast(n > 1 ? `${plant.name} erneut platziert (${n}× auf der Karte)` : `${plant.name} auf der Karte platziert`, '📍');
 }
 
 // --- MAP PANNING (click/single-finger-drag on empty canvas space) ---
@@ -661,7 +667,7 @@ function isInteractiveMapTarget(target) {
 function startMapPan(e) {
   if (e.button !== undefined && e.button !== 0) return;
   if (isInteractiveMapTarget(e.target)) return;
-  if (draggingPlantId || activeResizeZoneId || movingZoneId) return;
+  if (draggingPlacementId || activeResizeZoneId || movingZoneId) return;
 
   isPanning = true;
   const viewport = document.getElementById('map-viewport');
@@ -762,8 +768,8 @@ function initMapInteractions() {
     let changed = false;
     if (resizingZoneId) { resizingZoneId = null; changed = true; }
     if (editingZoneId) { closeZoneBar(false); changed = true; }
-    if (selectedPlantId) {
-      selectedPlantId = null;
+    if (selectedPlacementId) {
+      selectedPlacementId = null;
       document.getElementById('map-selected-bar').classList.add('hidden');
       changed = true;
     }

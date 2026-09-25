@@ -33,7 +33,9 @@ CREATE TABLE IF NOT EXISTS public.plants (
   y_pos INT,
   died_in_bed TEXT,
   died_bed_sunlight TEXT,
-  died_at TIMESTAMPTZ
+  died_at TIMESTAMPTZ,
+  placements JSONB DEFAULT '[]'::jsonb,
+  deaths JSONB DEFAULT '[]'::jsonb
 );
 
 -- 2b. Migration for existing databases: add columns used to record
@@ -41,6 +43,14 @@ CREATE TABLE IF NOT EXISTS public.plants (
 ALTER TABLE public.plants ADD COLUMN IF NOT EXISTS died_in_bed TEXT;
 ALTER TABLE public.plants ADD COLUMN IF NOT EXISTS died_bed_sunlight TEXT;
 ALTER TABLE public.plants ADD COLUMN IF NOT EXISTS died_at TIMESTAMPTZ;
+
+-- 2c. Migration: a plant can be placed several times on the map
+--     (placements = [{id, bed_id, x, y}]) and keeps a history of
+--     specimens that died (deaths = [{bed, sunlight, died_at}]).
+--     Legacy x_pos/y_pos/bed_id are kept and mirror the first placement.
+ALTER TABLE public.plants ADD COLUMN IF NOT EXISTS placements JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE public.plants ADD COLUMN IF NOT EXISTS deaths JSONB DEFAULT '[]'::jsonb;
+NOTIFY pgrst, 'reload schema';
 
 -- 3. Enable RLS and create public read/write policies
 ALTER TABLE public.garden_beds ENABLE ROW LEVEL SECURITY;

@@ -124,6 +124,8 @@ async function fetchAllData() {
     if (!storedPlants || migrated) savePlantsLocal();
     if (!storedZones || migrated) saveZonesLocal();
   }
+
+  plants.forEach(normalizePlant);
 }
 
 // Earlier versions seeded LocalStorage with English sample records. Replace
@@ -163,6 +165,7 @@ function saveZonesLocal() {
 
 // --- DATABASE CRUD OPERATIONS FOR PLANTS AND BEDS ---
 async function syncSavePlant(plant) {
+  normalizePlant(plant);
   if (isConnectedToSupabase && supabaseClient) {
     const payload = {
       id: plant.id,
@@ -180,7 +183,9 @@ async function syncSavePlant(plant) {
       y_pos: plant.y_pos,
       died_in_bed: plant.died_in_bed || null,
       died_bed_sunlight: plant.died_bed_sunlight || null,
-      died_at: plant.died_at || null
+      died_at: plant.died_at || null,
+      placements: plant.placements || [],
+      deaths: plant.deaths || []
     };
 
     const { error } = await supabaseClient.from('plants').upsert(payload);
