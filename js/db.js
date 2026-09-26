@@ -37,7 +37,18 @@ function updateDbStatusUI(connected) {
   const badge = document.getElementById('card-db-status-badge');
   const dotBase = "absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 border-brand-900";
   const banner = document.getElementById('offline-banner');
-  if (banner) banner.classList.toggle('hidden', connected);
+  if (banner) {
+    const pending = getOutbox().length;
+    banner.classList.toggle('hidden', connected && pending === 0);
+    const label = banner.querySelector('span');
+    if (label) {
+      label.innerText = !connected
+        ? (pending > 0
+            ? `Nur lokaler Speicher – ${pending} Änderung${pending === 1 ? '' : 'en'} ${pending === 1 ? 'wartet' : 'warten'} auf Sync`
+            : 'Nur lokaler Speicher – Änderungen sind nur auf diesem Gerät sichtbar')
+        : `${pending} Änderung${pending === 1 ? '' : 'en'} noch nicht synchronisiert`;
+    }
+  }
 
   if (connected) {
     dot.className = `${dotBase} bg-emerald-400 animate-pulse`;
@@ -98,6 +109,8 @@ function disconnectSupabase() {
 async function fetchAllData() {
   let connected = false;
   if (supabaseClient) {
+    // Push changes made while offline before pulling the shared state
+    await flushOutbox();
     try {
       const { data: bedsData, error: bedsErr } = await supabaseClient.from('garden_beds').select('*');
       const { data: plantsData, error: plantsErr } = await supabaseClient.from('plants').select('*');
@@ -165,70 +178,129 @@ function saveZonesLocal() {
   localStorage.setItem('verdant_zones', JSON.stringify(zones));
 }
 
+// --- OFFLINE OUTBOX ---
+// Writes that could not reach Supabase (no credentials yet, no network,
+// request error) are queued in LocalStorage and replayed on the next
+// successful connection. One entry per (table, id): the latest op wins.
+const OUTBOX_KEY = 'verdant_outbox';
+
+function getOutbox() {
+  try { return JSON.parse(localStorage.getItem(OUTBOX_KEY)) || []; } catch (e) { return []; }
+}
+
+function setOutbox(items) {
+  localStorage.setItem(OUTBOX_KEY, JSON.stringify(items));
+}
+
+function enqueueOutbox(entry) {
+  const items = getOutbox().filter(i => !(i.table === entry.table && i.id === entry.id));
+  items.push({ ...entry, queued_at: new Date().toISOString() });
+  setOutbox(items);
+}
+
+async function applyRemote(entry) {
+  if (entry.op === 'delete') return supabaseClient.from(entry.table).delete().eq('id', entry.id);
+  return supabaseClient.from(entry.table).upsert(entry.payload);
+}
+
+let flushingOutbox = false;
+async function flushOutbox() {
+  if (flushingOutbox || !supabaseClient) return 0;
+  const items = getOutbox();
+  if (items.length === 0) return 0;
+  flushingOutbox = true;
+  let synced = 0;
+  try {
+    for (const entry of items) {
+      try {
+        const { error } = await applyRemote(entry);
+        if (error) { console.error('Outbox sync error:', error); break; }
+        synced++;
+        setOutbox(getOutbox().filter(i => !(i.table === entry.table && i.id === entry.id)));
+      } catch (e) {
+        console.warn('Outbox sync aborted (offline?):', e);
+        break;
+      }
+    }
+  } finally {
+    flushingOutbox = false;
+  }
+  if (synced > 0) showToast(`${synced} Änderung${synced === 1 ? '' : 'en'} nach Supabase synchronisiert`, '☁️');
+  return synced;
+}
+
+// Try the write now; fall back to the outbox if Supabase isn't reachable.
+async function writeRemote(entry) {
+  if (isConnectedToSupabase && supabaseClient) {
+    try {
+      const { error } = await applyRemote(entry);
+      if (!error) return true;
+      console.error(`Supabase ${entry.op} error:`, error);
+    } catch (e) {
+      console.warn('Supabase write failed, queued:', e);
+    }
+  }
+  enqueueOutbox(entry);
+  updateDbStatusUI(isConnectedToSupabase);
+  return false;
+}
+
 // --- DATABASE CRUD OPERATIONS FOR PLANTS AND BEDS ---
+function plantPayload(plant) {
+  return {
+    id: plant.id,
+    name: plant.name,
+    botanical_name: plant.botanical_name,
+    sunlight: plant.sunlight,
+    water: plant.water,
+    soil: plant.soil,
+    category: plant.category,
+    status: plant.status,
+    notes: plant.notes,
+    emoji: plant.emoji,
+    bed_id: plant.bed_id,
+    x_pos: plant.x_pos,
+    y_pos: plant.y_pos,
+    died_in_bed: plant.died_in_bed || null,
+    died_bed_sunlight: plant.died_bed_sunlight || null,
+    died_at: plant.died_at || null,
+    placements: plant.placements || [],
+    deaths: plant.deaths || [],
+    wished_by: plant.wished_by || null
+  };
+}
+
+function zonePayload(zone) {
+  return {
+    id: zone.id,
+    name: zone.name,
+    sunlight: zone.sunlight,
+    x: zone.x,
+    y: zone.y,
+    width: zone.width,
+    height: zone.height
+  };
+}
+
 async function syncSavePlant(plant) {
   normalizePlant(plant);
-  if (isConnectedToSupabase && supabaseClient) {
-    const payload = {
-      id: plant.id,
-      name: plant.name,
-      botanical_name: plant.botanical_name,
-      sunlight: plant.sunlight,
-      water: plant.water,
-      soil: plant.soil,
-      category: plant.category,
-      status: plant.status,
-      notes: plant.notes,
-      emoji: plant.emoji,
-      bed_id: plant.bed_id,
-      x_pos: plant.x_pos,
-      y_pos: plant.y_pos,
-      died_in_bed: plant.died_in_bed || null,
-      died_bed_sunlight: plant.died_bed_sunlight || null,
-      died_at: plant.died_at || null,
-      placements: plant.placements || [],
-      deaths: plant.deaths || [],
-      wished_by: plant.wished_by || null
-    };
-
-    const { error } = await supabaseClient.from('plants').upsert(payload);
-    if (error) console.error("Supabase plant save error:", error);
-  }
   savePlantsLocal();
+  await writeRemote({ op: 'upsert', table: 'plants', id: plant.id, payload: plantPayload(plant) });
 }
 
 async function syncDeletePlant(plantId) {
-  if (isConnectedToSupabase && supabaseClient) {
-    const { error } = await supabaseClient.from('plants').delete().eq('id', plantId);
-    if (error) console.error("Supabase plant delete error:", error);
-  }
   savePlantsLocal();
+  await writeRemote({ op: 'delete', table: 'plants', id: plantId });
 }
 
 async function syncSaveZone(zone) {
-  if (isConnectedToSupabase && supabaseClient) {
-    const payload = {
-      id: zone.id,
-      name: zone.name,
-      sunlight: zone.sunlight,
-      x: zone.x,
-      y: zone.y,
-      width: zone.width,
-      height: zone.height
-    };
-
-    const { error } = await supabaseClient.from('garden_beds').upsert(payload);
-    if (error) console.error("Supabase zone save error:", error);
-  }
   saveZonesLocal();
+  await writeRemote({ op: 'upsert', table: 'garden_beds', id: zone.id, payload: zonePayload(zone) });
 }
 
 async function syncDeleteZone(zoneId) {
-  if (isConnectedToSupabase && supabaseClient) {
-    const { error } = await supabaseClient.from('garden_beds').delete().eq('id', zoneId);
-    if (error) console.error("Supabase zone delete error:", error);
-  }
   saveZonesLocal();
+  await writeRemote({ op: 'delete', table: 'garden_beds', id: zoneId });
 }
 
 // --- SQL SCHEMA SCRIPT LOADING ---

@@ -8,6 +8,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   renderMap();
   initMapInteractions();
   initPullToRefresh();
+  // Replay queued offline changes as soon as the network is back
+  window.addEventListener('online', () => { if (supabaseClient) refreshData(); });
   lucide.createIcons();
   showUserSelect();
 });
