@@ -594,7 +594,7 @@ function openUnplacedDrawer() {
           <span class="text-2xl">${p.emoji || '🪴'}</span>
           <div>
             <h4 class="font-bold text-xs text-stone-800">${p.name}</h4>
-            <span class="text-[10px] text-stone-500">${t(p.sunlight)} • ${t(p.category || 'Perennial')}${n > 0 ? ` • <span class="text-emerald-700 font-semibold">${n}× auf Karte</span>` : ''}${p.status === 'wishlist' ? ' • <span class="text-purple-700 font-semibold">Wunschliste</span>' : ''}</span>
+            <span class="text-[10px] text-stone-500">${t(p.sunlight)} • ${t(p.category || 'Perennial')}${n > 0 ? ` • <span class="text-emerald-700 font-semibold">${n}× auf Karte</span>` : ''}${p.status === 'wishlist' ? ' • <span class="text-emerald-700 font-semibold">Wunschliste</span>' : ''}</span>
           </div>
         </div>
         <button onclick="placePlantOnMap('${p.id}')" class="px-3 py-1.5 bg-brand-700 text-white text-xs font-semibold rounded-lg shadow-xs hover:bg-brand-800 transition-colors whitespace-nowrap">
