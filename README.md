@@ -1,4 +1,4 @@
-# Verdant — Garden Planner & Supabase Database
+# SaParadise — Garden Planner & Supabase Database
 
 A small client-side garden planning app: track plants, arrange them on an
 interactive garden map, and optionally sync everything to a Supabase backend
