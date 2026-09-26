@@ -143,8 +143,8 @@ function onMarkerDrag(e) {
   let newX = Math.round(point.x - dragOffsetX);
   let newY = Math.round(point.y - dragOffsetY);
 
-  newX = Math.max(20, Math.min(880, newX));
-  newY = Math.max(20, Math.min(630, newY));
+  newX = Math.max(20, Math.min(MAP_W - 20, newX));
+  newY = Math.max(20, Math.min(MAP_H - 20, newY));
 
   const found = findPlacement(draggingPlacementId);
   if (found) {
