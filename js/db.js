@@ -119,6 +119,9 @@ async function fetchAllData() {
         connected = true;
         zones = bedsData || [];
         plants = plantsData || [];
+        // Photos still waiting in the outbox are not on the server yet
+        const pendingIds = new Set(getOutbox().filter(i => i.table === 'photos' && i.op === 'upload').map(i => i.id));
+        plants.forEach(p => { if (pendingIds.has(p.id)) p.photo_pending = true; });
       }
     } catch (e) {
       connected = false;
@@ -141,6 +144,7 @@ async function fetchAllData() {
   }
 
   plants.forEach(normalizePlant);
+  await primePendingPhotoUrls();
 }
 
 // Earlier versions seeded LocalStorage with English sample records. Replace
@@ -199,8 +203,36 @@ function enqueueOutbox(entry) {
 }
 
 async function applyRemote(entry) {
+  if (entry.table === 'photos') return applyPhotoOp(entry);
   if (entry.op === 'delete') return supabaseClient.from(entry.table).delete().eq('id', entry.id);
   return supabaseClient.from(entry.table).upsert(entry.payload);
+}
+
+// Photo ops: { table: 'photos', op: 'upload' | 'delete', id: plantId }.
+// Upload reads the resized blobs from IndexedDB, pushes them to Storage and
+// then writes the resulting URLs onto the plant row.
+async function applyPhotoOp(entry) {
+  try {
+    if (entry.op === 'delete') {
+      await deletePhotoRemote(entry.id);
+      return { error: null };
+    }
+    const blobs = await getPendingPhoto(entry.id);
+    if (!blobs) return { error: null }; // nothing left to upload
+    const urls = await uploadPhoto(entry.id, blobs);
+    const plant = plants.find(p => p.id === entry.id);
+    if (plant) {
+      Object.assign(plant, urls, { photo_pending: false });
+      savePlantsLocal();
+      const { error } = await supabaseClient.from('plants').upsert(plantPayload(plant));
+      if (error) return { error };
+    }
+    await removePendingPhoto(entry.id);
+    if (typeof renderPlantList === 'function') { renderPlantList(); renderMap(); }
+    return { error: null };
+  } catch (e) {
+    return { error: e };
+  }
 }
 
 let flushingOutbox = false;
@@ -266,7 +298,9 @@ function plantPayload(plant) {
     died_at: plant.died_at || null,
     placements: plant.placements || [],
     deaths: plant.deaths || [],
-    wished_by: plant.wished_by || null
+    wished_by: plant.wished_by || null,
+    photo_url: plant.photo_url || null,
+    thumb_url: plant.thumb_url || null
   };
 }
 
@@ -288,9 +322,26 @@ async function syncSavePlant(plant) {
   await writeRemote({ op: 'upsert', table: 'plants', id: plant.id, payload: plantPayload(plant) });
 }
 
-async function syncDeletePlant(plantId) {
+async function syncDeletePlant(plantId, hadPhoto = true) {
   savePlantsLocal();
+  await removePendingPhoto(plantId);
   await writeRemote({ op: 'delete', table: 'plants', id: plantId });
+  if (hadPhoto) await syncDeletePhoto(plantId);
+}
+
+// Stores the resized photo locally and uploads it now or via the outbox.
+async function syncSavePhoto(plant, blobs) {
+  await storePendingPhoto(plant.id, blobs);
+  plant.photo_pending = true;
+  savePlantsLocal();
+  // Drop a queued delete for the same plant: the new photo replaces it
+  setOutbox(getOutbox().filter(i => !(i.table === 'photos' && i.id === plant.id)));
+  await writeRemote({ op: 'upload', table: 'photos', id: plant.id });
+}
+
+async function syncDeletePhoto(plantId) {
+  await removePendingPhoto(plantId);
+  await writeRemote({ op: 'delete', table: 'photos', id: plantId });
 }
 
 async function syncSaveZone(zone) {

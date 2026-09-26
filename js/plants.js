@@ -71,9 +71,9 @@ function renderPlantList() {
       <div class="bg-white rounded-2xl p-4 border ${isDeceased ? 'border-stone-300 opacity-80' : 'border-stone-200/80'} shadow-xs hover:shadow-md transition-all flex flex-col justify-between space-y-3">
         <div class="flex items-start justify-between">
           <div class="flex items-start space-x-3">
-            <div class="w-12 h-12 rounded-2xl bg-stone-100 flex items-center justify-center text-2xl border border-stone-200/60 shrink-0">
-              ${plant.emoji || '🪴'}
-            </div>
+            ${hasPhoto(plant)
+              ? `<button type="button" onclick="openPhotoLightbox('${plant.id}')" title="Foto ansehen" class="shrink-0 rounded-full focus:outline-none focus:ring-2 focus:ring-brand-500">${plantAvatarHtml(plant, 'w-12 h-12')}</button>`
+              : plantAvatarHtml(plant, 'w-12 h-12')}
             <div>
               <div class="flex items-center gap-2">
                 <h3 class="font-bold text-stone-800 text-sm leading-tight">${plant.name}</h3>
@@ -204,6 +204,68 @@ function confirmMarkPlacementDeceased(placementId) {
 }
 
 // --- PLANT MODAL HANDLERS ---
+// Photo chosen in the form (resized blobs) and whether the existing photo
+// should be removed on save.
+let formPhotoBlobs = null;
+let formPhotoRemove = false;
+let formPhotoPreviewUrl = null;
+
+function setFormPhotoPreview(src, ownsBlobUrl = false) {
+  const img = document.getElementById('form-photo-img');
+  const emoji = document.getElementById('form-photo-emoji');
+  const removeBtn = document.getElementById('btn-form-photo-remove');
+  if (formPhotoPreviewUrl) { URL.revokeObjectURL(formPhotoPreviewUrl); formPhotoPreviewUrl = null; }
+  if (ownsBlobUrl) formPhotoPreviewUrl = src;
+  if (src) {
+    img.src = src;
+    img.classList.remove('hidden');
+    emoji.classList.add('hidden');
+    removeBtn.classList.remove('hidden');
+  } else {
+    img.src = '';
+    img.classList.add('hidden');
+    emoji.classList.remove('hidden');
+    removeBtn.classList.add('hidden');
+  }
+}
+
+function updateFormPhotoEmoji() {
+  document.getElementById('form-photo-emoji').innerText = document.getElementById('form-emoji').value || '🪴';
+}
+
+function resetFormPhoto(plant = null) {
+  formPhotoBlobs = null;
+  formPhotoRemove = false;
+  document.getElementById('form-photo-camera').value = '';
+  document.getElementById('form-photo-file').value = '';
+  document.getElementById('form-photo-spinner').classList.add('hidden');
+  setFormPhotoPreview(plant ? plantThumbSrc(plant) : null);
+  updateFormPhotoEmoji();
+}
+
+async function handleFormPhotoChange(e) {
+  const file = e.target.files && e.target.files[0];
+  e.target.value = '';
+  if (!file) return;
+  const spinner = document.getElementById('form-photo-spinner');
+  spinner.classList.remove('hidden');
+  try {
+    formPhotoBlobs = await processImage(file);
+    formPhotoRemove = false;
+    setFormPhotoPreview(URL.createObjectURL(formPhotoBlobs.thumb), true);
+  } catch (err) {
+    showToast(err.message || 'Foto konnte nicht verarbeitet werden.', '⚠️');
+  } finally {
+    spinner.classList.add('hidden');
+  }
+}
+
+function removeFormPhoto() {
+  formPhotoBlobs = null;
+  formPhotoRemove = true;
+  setFormPhotoPreview(null);
+}
+
 function openPlantModal(plantId = null) {
   const modal = document.getElementById('modal-plant-form');
   const form = document.getElementById('plant-form');
@@ -224,6 +286,7 @@ function openPlantModal(plantId = null) {
     document.getElementById('form-category').value = plant.category || 'Perennial';
     document.getElementById('form-notes').value = plant.notes || '';
     document.getElementById('btn-modal-delete-plant').classList.remove('hidden');
+    resetFormPhoto(plant);
   } else {
     document.getElementById('btn-modal-delete-plant').classList.add('hidden');
     title.innerText = 'Neue Pflanze hinzufügen';
@@ -233,9 +296,11 @@ function openPlantModal(plantId = null) {
     const statusFilter = document.getElementById('select-status-filter').value;
     document.getElementById('form-status').value = ['garden', 'wishlist'].includes(statusFilter) ? statusFilter : 'garden';
     if (lightFilter !== 'all') document.getElementById('form-sunlight').value = lightFilter;
+    resetFormPhoto();
   }
 
   modal.classList.remove('hidden');
+  lucide.createIcons();
 }
 
 function closePlantModal() {
@@ -282,7 +347,10 @@ async function handlePlantFormSubmit(e, skipDuplicateCheck = false) {
     died_in_bed: existing ? existing.died_in_bed || null : null,
     died_bed_sunlight: existing ? existing.died_bed_sunlight || null : null,
     died_at: existing ? existing.died_at || null : null,
-    wished_by: existing ? existing.wished_by || null : null
+    wished_by: existing ? existing.wished_by || null : null,
+    photo_url: existing && !formPhotoRemove ? existing.photo_url || null : null,
+    thumb_url: existing && !formPhotoRemove ? existing.thumb_url || null : null,
+    photo_pending: existing && !formPhotoRemove && !formPhotoBlobs ? !!existing.photo_pending : false
   };
 
   // Attribute the wish to whoever is using the app when it (newly) lands on the wishlist
@@ -322,6 +390,11 @@ async function handlePlantFormSubmit(e, skipDuplicateCheck = false) {
   }
 
   await syncSavePlant(plantData);
+  if (formPhotoBlobs) {
+    await syncSavePhoto(plantData, formPhotoBlobs);
+  } else if (formPhotoRemove && existing && (existing.photo_url || existing.photo_pending)) {
+    await syncDeletePhoto(plantData.id);
+  }
   renderPlantList();
   renderMap();
   closePlantModal();
@@ -341,7 +414,7 @@ function deletePlant(plantId) {
     `"${plant ? plant.name : 'Diese Pflanze'}" aus deinem Gartenverzeichnis entfernen?`,
     async () => {
       plants = plants.filter(p => p.id !== plantId);
-      await syncDeletePlant(plantId);
+      await syncDeletePlant(plantId, !!(plant && (plant.photo_url || plant.photo_pending)));
       renderPlantList();
       renderMap();
       if (selectedPlacementId && !findPlacement(selectedPlacementId)) closeSelectedBar();

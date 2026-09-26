@@ -46,3 +46,5 @@ python3 -m http.server 8765
 1. Create a Supabase project.
 2. Run `sql/schema.sql` in the Supabase SQL Editor.
 3. In the app's "Supabase DB" tab, enter your project URL and anon key.
+
+> Already set up? Re-run `sql/schema.sql` after updates — it is idempotent and adds new columns and the `plant-photos` storage bucket (plant photos are resized in the browser and stored there).
