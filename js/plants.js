@@ -242,11 +242,29 @@ function closePlantModal() {
   document.getElementById('modal-plant-form').classList.add('hidden');
 }
 
-async function handlePlantFormSubmit(e) {
+async function handlePlantFormSubmit(e, skipDuplicateCheck = false) {
   e.preventDefault();
   const id = document.getElementById('plant-id').value;
 
   const existing = id ? plants.find(p => p.id === id) : null;
+
+  // Duplicate guard: same name already in the directory (new plants or renames)
+  if (!skipDuplicateCheck) {
+    const name = document.getElementById('form-name').value.trim().toLowerCase();
+    const dupes = plants.filter(p => p.id !== id && (p.name || '').trim().toLowerCase() === name);
+    if (dupes.length > 0) {
+      const d = dupes[0];
+      const where = d.status === 'wishlist' ? 'auf der Wunschliste' : d.status === 'deceased' ? 'als verstorben' : placementCount(d) > 0 ? `${placementCount(d)}× auf der Karte` : 'im Garten';
+      showConfirmDialog(
+        'Pflanze existiert bereits',
+        `"${d.name}" ist schon im Verzeichnis (${where}). Trotzdem als eigenen Eintrag anlegen? Mehrere Exemplare kannst du auch über „Weitere“ auf der Karte platzieren.`,
+        () => handlePlantFormSubmit(e, true),
+        'Trotzdem anlegen',
+        'neutral'
+      );
+      return;
+    }
+  }
 
   const plantData = {
     id: id || 'p_' + Date.now(),
