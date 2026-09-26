@@ -45,7 +45,7 @@ function showToast(message, icon = '🌿') {
   }, 2500);
 }
 
-function showConfirmDialog(title, message, onConfirm, okLabel = 'Löschen') {
+function showConfirmDialog(title, message, onConfirm, okLabel = 'Löschen', tone = 'danger') {
   const modal = document.getElementById('modal-confirm');
   document.getElementById('confirm-title').innerText = title;
   document.getElementById('confirm-message').innerText = message;
@@ -53,6 +53,10 @@ function showConfirmDialog(title, message, onConfirm, okLabel = 'Löschen') {
   const cancelBtn = document.getElementById('btn-confirm-cancel');
   const okBtn = document.getElementById('btn-confirm-ok');
   okBtn.innerText = okLabel;
+  okBtn.classList.toggle('bg-red-600', tone === 'danger');
+  okBtn.classList.toggle('hover:bg-red-700', tone === 'danger');
+  okBtn.classList.toggle('bg-brand-600', tone !== 'danger');
+  okBtn.classList.toggle('hover:bg-brand-700', tone !== 'danger');
 
   const cleanup = () => {
     modal.classList.add('hidden');
