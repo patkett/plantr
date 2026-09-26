@@ -25,32 +25,27 @@ function initPullToRefresh() {
   const scroller = document.getElementById('plant-list-scroll');
   const cards = document.getElementById('plant-cards-container');
   const indicator = document.getElementById('pull-indicator');
-  const sprout = document.getElementById('pull-sprout');
-  if (!scroller || !cards || !indicator || !sprout) return;
-  const stem = document.getElementById('sprout-stem');
-  const leafL = document.getElementById('sprout-leaf-l');
-  const leafR = document.getElementById('sprout-leaf-r');
+  if (!scroller || !cards || !indicator) return;
+  // lucide replaces the <i> with an <svg>, so resolve the icon lazily
+  const icon = () => indicator.firstElementChild;
   const THRESHOLD = 80;   // px of list offset that triggers a refresh
   const MAX = 100;
   let startY = null, pulling = false, refreshing = false, offset = 0;
 
-  // progress 0..1 drives the sprout: stem grows, leaves unfold
-  const drawSprout = (p) => {
-    const e = 1 - Math.pow(1 - p, 2);
+  // progress 0..1 drives the icon: fades in and rotates with the drag
+  const drawIcon = (p) => {
+    const el = icon(); if (!el) return;
     indicator.style.opacity = Math.min(1, p * 2.5);
-    stem.style.transform = `scaleY(${0.15 + 0.85 * e})`;
-    const leaf = Math.max(0, (e - 0.25) / 0.75);
-    leafL.style.transform = `rotate(${(1 - leaf) * 70}deg) scale(${leaf})`;
-    leafR.style.transform = `rotate(${-(1 - leaf) * 70}deg) scale(${leaf})`;
-    sprout.classList.toggle('text-brand-600', p >= 1);
-    sprout.classList.toggle('text-stone-500', p < 1);
+    el.style.transform = `rotate(${p * 270}deg)`;
+    el.classList.toggle('text-brand-600', p >= 1);
+    el.classList.toggle('text-stone-500', p < 1);
   };
 
   const setOffset = (px, animate) => {
     offset = px;
     cards.style.transition = animate ? 'transform 250ms ease-out' : 'none';
     cards.style.transform = px ? `translateY(${px}px)` : '';
-    drawSprout(Math.min(1, px / THRESHOLD));
+    drawIcon(Math.min(1, px / THRESHOLD));
   };
 
   scroller.addEventListener('touchstart', (e) => {
@@ -73,10 +68,10 @@ function initPullToRefresh() {
     if (offset >= THRESHOLD) {
       refreshing = true;
       setOffset(THRESHOLD * 0.8, true);
-      drawSprout(1);
-      sprout.classList.add('refreshing');
+      drawIcon(1);
+      icon()?.classList.add('refreshing');
       try { await refreshData(); } finally {
-        sprout.classList.remove('refreshing');
+        icon()?.classList.remove('refreshing');
         setOffset(0, true);
         indicator.style.transition = 'opacity 200ms';
         indicator.style.opacity = 0;
