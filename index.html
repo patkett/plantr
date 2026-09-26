@@ -17,9 +17,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,600;1,400&display=swap" rel="stylesheet">
 
-  <script src="js/tailwind-config.js?v=26"></script>
+  <script src="js/tailwind-config.js?v=27"></script>
 
-  <link rel="stylesheet" href="css/styles.css?v=26">
+  <link rel="stylesheet" href="css/styles.css?v=27">
 </head>
 
 <body class="h-full flex flex-col font-sans text-stone-800 bg-stone-100 antialiased overflow-hidden select-none">
@@ -131,21 +131,13 @@
       <!-- Garden Map Scrollable Surface Canvas -->
       <div id="map-viewport" class="flex-1 overflow-auto relative p-6 grid-pattern flex items-center justify-center cursor-grab active:cursor-grabbing">
         <!-- Zoom wrapper keeps the scrollable area correct at any pinch-zoom level -->
-        <div id="canvas-zoom-wrapper" class="my-auto shrink-0" style="width: 900px; height: 650px;">
+        <div id="canvas-zoom-wrapper" class="my-auto shrink-0" style="width: 900px; height: 1300px;">
         <!-- Main Interactive Map Bounds Container -->
-        <div id="garden-canvas" class="w-[900px] h-[650px] bg-stone-50 rounded-2xl border-2 border-stone-300 shadow-lg relative overflow-hidden transition-all origin-top-left">
+        <div id="garden-canvas" class="w-[900px] h-[1300px] bg-stone-50 rounded-2xl border-2 border-stone-300 shadow-lg relative overflow-hidden transition-all origin-top-left">
           
           <!-- Compass Overlay -->
           <div class="absolute top-3 right-3 bg-white/80 backdrop-blur rounded-full px-2.5 py-1 text-[10px] font-bold text-stone-500 border border-stone-200 shadow-xs flex items-center gap-1 z-10">
             <i data-lucide="compass" class="w-3.5 h-3.5 text-brand-600"></i> N
-          </div>
-
-          <!-- Light Conditions Legend Overlay -->
-          <div class="absolute bottom-3 left-3 bg-white/90 backdrop-blur rounded-xl p-2.5 text-[10px] text-stone-600 border border-stone-200 shadow-sm z-10 flex flex-col gap-1.5">
-            <div class="font-bold text-[9px] uppercase tracking-wider text-stone-400 mb-0.5">Lichtzonen</div>
-            <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-amber-300 border border-amber-500"></span> Volle Sonne</div>
-            <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-orange-200 border border-orange-400"></span> Halbschatten</div>
-            <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-slate-300 border border-slate-400"></span> Vollschatten</div>
           </div>
 
           <!-- ZONES & PLANT MARKERS LAYER -->
@@ -494,16 +486,16 @@
     </div>
   </div>
 
-  <script src="js/i18n.js?v=26"></script>
-  <script src="js/data.js?v=26"></script>
-  <script src="js/state.js?v=26"></script>
-  <script src="js/user.js?v=26"></script>
-  <script src="js/placements.js?v=26"></script>
-  <script src="js/db.js?v=26"></script>
-  <script src="js/ui.js?v=26"></script>
-  <script src="js/navigation.js?v=26"></script>
-  <script src="js/plants.js?v=26"></script>
-  <script src="js/map.js?v=26"></script>
-  <script src="js/app.js?v=26"></script>
+  <script src="js/i18n.js?v=27"></script>
+  <script src="js/data.js?v=27"></script>
+  <script src="js/state.js?v=27"></script>
+  <script src="js/user.js?v=27"></script>
+  <script src="js/placements.js?v=27"></script>
+  <script src="js/db.js?v=27"></script>
+  <script src="js/ui.js?v=27"></script>
+  <script src="js/navigation.js?v=27"></script>
+  <script src="js/plants.js?v=27"></script>
+  <script src="js/map.js?v=27"></script>
+  <script src="js/app.js?v=27"></script>
 </body>
 </html>

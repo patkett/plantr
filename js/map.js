@@ -1,3 +1,7 @@
+// Logical size of the garden canvas in px (must match #garden-canvas in index.html)
+const MAP_W = 900;
+const MAP_H = 1300;
+
 // --- GARDEN CANVAS: BEDS, PLANT MARKERS, AND SUNLIGHT MISMATCH DETECTION ---
 
 let mapZoom = 1;
@@ -392,8 +396,8 @@ function onZoneMove(e) {
 
   const w = zone.width || zone.w || 300;
   const h = zone.height || zone.h || 200;
-  const newX = Math.max(0, Math.min(900 - w, Math.round(moveZoneStartX + (point.x - moveStartX))));
-  const newY = Math.max(0, Math.min(650 - h, Math.round(moveZoneStartY + (point.y - moveStartY))));
+  const newX = Math.max(0, Math.min(MAP_W - w, Math.round(moveZoneStartX + (point.x - moveStartX))));
+  const newY = Math.max(0, Math.min(MAP_H - h, Math.round(moveZoneStartY + (point.y - moveStartY))));
   const dx = newX - zone.x;
   const dy = newY - zone.y;
   zone.x = newX;
@@ -480,8 +484,8 @@ function onZoneResize(e) {
   const deltaX = point.x - resizeStartX;
   const deltaY = point.y - resizeStartY;
 
-  zone.width = Math.max(160, Math.min(860, Math.round(resizeStartWidth + deltaX)));
-  zone.height = Math.max(120, Math.min(620, Math.round(resizeStartHeight + deltaY)));
+  zone.width = Math.max(160, Math.min(MAP_W - 40, Math.round(resizeStartWidth + deltaX)));
+  zone.height = Math.max(120, Math.min(MAP_H - 30, Math.round(resizeStartHeight + deltaY)));
   delete zone.w;
   delete zone.h;
 
@@ -646,8 +650,8 @@ function setMapZoom(newZoom) {
   const wrapper = document.getElementById('canvas-zoom-wrapper');
   if (canvas) canvas.style.transform = `scale(${mapZoom})`;
   if (wrapper) {
-    wrapper.style.width = `${900 * mapZoom}px`;
-    wrapper.style.height = `${650 * mapZoom}px`;
+    wrapper.style.width = `${MAP_W * mapZoom}px`;
+    wrapper.style.height = `${MAP_H * mapZoom}px`;
   }
 }
 
