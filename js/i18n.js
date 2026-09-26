@@ -7,7 +7,7 @@
 
 const LABELS_DE = {
   'Full Sun': 'Volle Sonne',
-  'Partial Shade': 'Teilschatten',
+  'Partial Shade': 'Halbschatten',
   'Full Shade': 'Vollschatten',
   'Low': 'Niedrig',
   'Moderate': 'Mittel',
@@ -31,3 +31,9 @@ const LABELS_DE = {
 function t(value) {
   return LABELS_DE[value] || value;
 }
+
+// Icon-first labels for sunlight and water ("☀️ Volle Sonne", "💧💧 Mittel")
+const SUN_ICONS = { 'Full Sun': '☀️', 'Partial Shade': '⛅', 'Full Shade': '☁️' };
+const WATER_ICONS = { 'Low': '💧', 'Moderate': '💧💧', 'High': '💧💧💧' };
+function sunLabel(v) { return `${SUN_ICONS[v] || ''} ${t(v)}`.trim(); }
+function waterLabel(v) { return `${WATER_ICONS[v] || ''} ${t(v)}`.trim(); }

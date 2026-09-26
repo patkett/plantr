@@ -59,8 +59,6 @@ function showUserSelect() {
   const last = localStorage.getItem(USER_STORAGE_KEY);
   const container = document.getElementById('user-select-buttons');
   container.innerHTML = USERS.map(u => `
-    <button onclick="setCurrentUser('${u}')" class="user-half group relative flex-1 flex items-end justify-center pb-5 transition-all active:scale-[0.98] ${u === last ? 'user-half-last' : ''}" aria-label="${u}">
-      <span class="px-5 py-2 rounded-full bg-white/90 text-stone-900 font-bold text-base shadow-lg border-2 ${u === last ? 'border-brand-600' : 'border-transparent'} group-hover:border-brand-500 group-hover:scale-105 transition-all">${u}</span>
-    </button>`).join('');
+    <button onclick="setCurrentUser('${u}')" class="user-half flex-1 py-3.5 text-lg font-semibold text-stone-900 bg-white/95 backdrop-blur shadow-xl first:rounded-l-full last:rounded-r-full first:border-r first:border-stone-200 hover:bg-white active:bg-stone-100 transition-colors ${u === last ? 'text-brand-700' : ''}" aria-label="${u}">${u}</button>`).join('');
   overlay.classList.remove('hidden');
 }

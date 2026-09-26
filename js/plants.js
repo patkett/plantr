@@ -93,10 +93,10 @@ function renderPlantList() {
         <!-- Badges -->
         <div class="flex flex-wrap items-center gap-1.5 pt-1 text-[11px]">
           <span class="px-2.5 py-0.5 rounded-full border font-medium ${lightBadgeColor}">
-            ${t(plant.sunlight)}
+            ${sunLabel(plant.sunlight)}
           </span>
           <span class="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
-            💧 ${t(plant.water || 'Moderate')} Wasser
+            ${waterLabel(plant.water || 'Moderate')}
           </span>
           <span class="px-2.5 py-0.5 rounded-full bg-stone-100 text-stone-600 border border-stone-200">
             🌱 ${t(plant.soil || 'Well-Drained')}

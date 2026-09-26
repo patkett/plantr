@@ -56,7 +56,6 @@ body {
 }
 
 /* User select: illustration split into two tappable halves */
-.user-half { background: transparent; }
 .user-half:focus-visible { outline: none; }
 #btn-user-chip { background-repeat: no-repeat; }
 
