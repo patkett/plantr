@@ -1,4 +1,4 @@
--- Verdant Garden Planner — Supabase schema setup script.
+-- SaParadise Gartenplaner — Supabase schema setup script.
 -- Run this in your Supabase project's SQL Editor to create the
 -- required tables (plants and garden_beds) with public access policies.
 
@@ -54,7 +54,27 @@ ALTER TABLE public.plants ADD COLUMN IF NOT EXISTS deaths JSONB DEFAULT '[]'::js
 
 -- 2d. Migration: who (Sandra/Patrick) put a plant on the wishlist.
 ALTER TABLE public.plants ADD COLUMN IF NOT EXISTS wished_by TEXT;
+
+-- 2e. Migration: plant photos. Files live in the public storage bucket
+--     "plant-photos" (full/<id>.jpg and thumb/<id>.jpg); the plant row
+--     only keeps the public URLs.
+ALTER TABLE public.plants ADD COLUMN IF NOT EXISTS photo_url TEXT;
+ALTER TABLE public.plants ADD COLUMN IF NOT EXISTS thumb_url TEXT;
 NOTIFY pgrst, 'reload schema';
+
+-- 2f. Storage bucket for plant photos (public read) with anon read/write.
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('plant-photos', 'plant-photos', true)
+ON CONFLICT (id) DO UPDATE SET public = true;
+
+DROP POLICY IF EXISTS "Public read plant-photos" ON storage.objects;
+DROP POLICY IF EXISTS "Public insert plant-photos" ON storage.objects;
+DROP POLICY IF EXISTS "Public update plant-photos" ON storage.objects;
+DROP POLICY IF EXISTS "Public delete plant-photos" ON storage.objects;
+CREATE POLICY "Public read plant-photos"   ON storage.objects FOR SELECT USING (bucket_id = 'plant-photos');
+CREATE POLICY "Public insert plant-photos" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'plant-photos');
+CREATE POLICY "Public update plant-photos" ON storage.objects FOR UPDATE USING (bucket_id = 'plant-photos') WITH CHECK (bucket_id = 'plant-photos');
+CREATE POLICY "Public delete plant-photos" ON storage.objects FOR DELETE USING (bucket_id = 'plant-photos');
 
 -- 3. Enable RLS and create public read/write policies
 ALTER TABLE public.garden_beds ENABLE ROW LEVEL SECURITY;

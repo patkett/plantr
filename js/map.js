@@ -78,8 +78,8 @@ function renderMap() {
             </div>
           ` : ''}
 
-          <div class="w-10 h-10 rounded-2xl bg-white shadow-md border-2 ${isSelected ? 'border-brand-600 marker-active' : (hasSunMismatch ? 'border-amber-400' : 'border-stone-300')} flex items-center justify-center text-xl transition-transform transform group-hover:scale-110">
-            ${plant.emoji || '🪴'}
+          <div class="w-10 h-10 rounded-full bg-white shadow-md border-2 ${isSelected ? 'border-brand-600 marker-active' : (hasSunMismatch ? 'border-amber-400' : 'border-stone-300')} flex items-center justify-center text-xl transition-transform transform group-hover:scale-110 overflow-hidden">
+            ${plantThumbSrc(plant) ? `<img src="${plantThumbSrc(plant)}" alt="" draggable="false" class="w-full h-full object-cover pointer-events-none">` : (plant.emoji || '🪴')}
           </div>
           <span class="mt-1 px-2 py-0.5 bg-stone-900/80 text-white text-[10px] font-medium rounded-full shadow-md whitespace-nowrap pointer-events-none">
             ${plant.name}
@@ -200,7 +200,9 @@ function showSelectedBar(placementId) {
   const { plant, placement } = found;
 
   const bar = document.getElementById('map-selected-bar');
-  document.getElementById('selected-item-icon').innerText = plant.emoji || '🪴';
+  const iconEl = document.getElementById('selected-item-icon');
+  const thumb = plantThumbSrc(plant);
+  iconEl.innerHTML = thumb ? `<img src="${thumb}" alt="" class="w-full h-full object-cover rounded-full">` : (plant.emoji || '🪴');
   const total = placementCount(plant);
   document.getElementById('selected-item-title').innerText = total > 1 ? `${plant.name} (${total}×)` : plant.name;
 
@@ -595,7 +597,7 @@ function openUnplacedDrawer() {
       return `
       <div class="p-3 bg-stone-50 rounded-xl border border-stone-200 flex items-center justify-between">
         <div class="flex items-center space-x-3">
-          <span class="text-2xl">${p.emoji || '🪴'}</span>
+          ${plantAvatarHtml(p, 'w-10 h-10', '', 'text-2xl')}
           <div>
             <h4 class="font-bold text-xs text-stone-800">${p.name}</h4>
             <span class="text-[10px] text-stone-500">${sunLabel(p.sunlight)} • ${t(p.category || 'Perennial')}${n > 0 ? ` • <span class="text-emerald-700 font-semibold">${n}× auf Karte</span>` : ''}${p.status === 'wishlist' ? ' • <span class="text-emerald-700 font-semibold">Wunschliste</span>' : ''}</span>
