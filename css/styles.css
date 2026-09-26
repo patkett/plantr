@@ -62,3 +62,9 @@ body {
 
 /* Pull-to-refresh: keep the browser's native bounce from interfering */
 #plant-list-scroll { overscroll-behavior-y: contain; }
+#pull-sprout path, #pull-sprout g { transition: none; }
+@keyframes sprout-sway {
+  0%, 100% { transform: rotate(-6deg); }
+  50%      { transform: rotate(6deg); }
+}
+#pull-sprout.refreshing { transform-origin: 24px 42px; animation: sprout-sway 0.9s ease-in-out infinite; }
