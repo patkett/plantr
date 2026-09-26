@@ -35,7 +35,7 @@ function renderMap() {
           </button>
         </div>
         <div class="text-[10px] text-stone-500 font-semibold uppercase tracking-wider bg-white/70 w-max px-2 py-0.5 rounded">
-          ${t(zone.sunlight)}-Beet
+          ${sunLabel(zone.sunlight)}
         </div>
         ${zone.id === resizingZoneId ? `
           <div class="zone-resize-handle absolute bottom-1.5 right-1.5 w-9 h-9 bg-brand-700 rounded-lg shadow-md cursor-se-resize flex items-center justify-center z-40"
@@ -203,7 +203,7 @@ function showSelectedBar(placementId) {
   const zone = zones.find(z => z.id === placement.bed_id);
   const zoneText = zone ? zone.name : 'Kein Beet zugewiesen';
 
-  document.getElementById('selected-item-subtitle').innerText = `${zoneText} • ${t(plant.sunlight)}`;
+  document.getElementById('selected-item-subtitle').innerText = `${zoneText} • ${sunLabel(plant.sunlight)}`;
 
   // Light conflict gets its own line so it is never truncated
   const conflictEl = document.getElementById('selected-item-conflict');
@@ -594,7 +594,7 @@ function openUnplacedDrawer() {
           <span class="text-2xl">${p.emoji || '🪴'}</span>
           <div>
             <h4 class="font-bold text-xs text-stone-800">${p.name}</h4>
-            <span class="text-[10px] text-stone-500">${t(p.sunlight)} • ${t(p.category || 'Perennial')}${n > 0 ? ` • <span class="text-emerald-700 font-semibold">${n}× auf Karte</span>` : ''}${p.status === 'wishlist' ? ' • <span class="text-emerald-700 font-semibold">Wunschliste</span>' : ''}</span>
+            <span class="text-[10px] text-stone-500">${sunLabel(p.sunlight)} • ${t(p.category || 'Perennial')}${n > 0 ? ` • <span class="text-emerald-700 font-semibold">${n}× auf Karte</span>` : ''}${p.status === 'wishlist' ? ' • <span class="text-emerald-700 font-semibold">Wunschliste</span>' : ''}</span>
           </div>
         </div>
         <button onclick="placePlantOnMap('${p.id}')" class="px-3 py-1.5 bg-brand-700 text-white text-xs font-semibold rounded-lg shadow-xs hover:bg-brand-800 transition-colors whitespace-nowrap">
