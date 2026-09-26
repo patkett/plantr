@@ -71,15 +71,16 @@ function renderMap() {
            onclick="togglePlantMarker(event, '${pl.id}')"
            class="absolute -translate-x-1/2 -translate-y-1/2 cursor-grab active:cursor-grabbing z-20 group pointer-events-auto">
 
-        <div class="relative flex flex-col items-center">
+        <div class="flex flex-col items-center">
+          <div class="relative">
           ${hasSunMismatch ? `
             <div class="absolute -top-2 -right-1 z-30 bg-amber-500 text-white rounded-full p-0.5 shadow-sm border border-white" title="Lichtkonflikt! Das Beet hat ${t(bed.sunlight)}, die Pflanze bevorzugt aber ${t(plant.sunlight)}">
               <i data-lucide="alert-triangle" class="w-3 h-3"></i>
             </div>
           ` : ''}
-
           <div class="w-10 h-10 rounded-full bg-white shadow-md border-2 ${isSelected ? 'border-brand-600 marker-active' : (hasSunMismatch ? 'border-amber-400' : 'border-stone-300')} flex items-center justify-center text-xl transition-transform transform group-hover:scale-110 overflow-hidden">
             ${plantThumbSrc(plant) ? `<img src="${plantThumbSrc(plant)}" alt="" draggable="false" class="w-full h-full object-cover pointer-events-none">` : leafSvg('w-5 h-5')}
+          </div>
           </div>
           <span class="mt-1 px-2 py-0.5 bg-stone-900/80 text-white text-[10px] font-medium rounded-full shadow-md whitespace-nowrap pointer-events-none">
             ${plant.name}
