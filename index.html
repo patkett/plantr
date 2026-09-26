@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Verdant - Gartenplaner & Supabase-Datenbank</title>
+  <title>SaParadise - Gartenplaner & Supabase-Datenbank</title>
   
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -17,9 +17,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,600;1,400&display=swap" rel="stylesheet">
 
-  <script src="js/tailwind-config.js?v=27"></script>
+  <script src="js/tailwind-config.js?v=28"></script>
 
-  <link rel="stylesheet" href="css/styles.css?v=27">
+  <link rel="stylesheet" href="css/styles.css?v=28">
 </head>
 
 <body class="h-full flex flex-col font-sans text-stone-800 bg-stone-100 antialiased overflow-hidden select-none">
@@ -32,7 +32,7 @@
         <span id="db-status-dot" class="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-amber-400 border-2 border-brand-900"></span>
       </button>
       <div>
-        <h1 class="font-serif font-bold text-lg tracking-tight leading-none text-white">Verdant</h1>
+        <h1 class="font-serif font-bold text-lg tracking-tight leading-none text-white">SaParadise</h1>
         <p class="text-[10px] text-brand-300 font-medium tracking-wide uppercase mt-0.5">Gartenplaner</p>
       </div>
     </div>
@@ -456,11 +456,11 @@
   <div id="user-select-overlay" class="hidden fixed inset-0 z-[70] bg-stone-900/80 backdrop-blur-sm flex items-center justify-center p-4">
     <div class="relative w-full max-w-sm rounded-3xl overflow-hidden shadow-2xl bg-stone-900" style="aspect-ratio: 687 / 1024; max-height: 92vh;">
       <img src="img/gardeners.jpg" alt="Patrick und Sandra im Garten" class="absolute inset-0 w-full h-full object-cover" draggable="false">
-      <div class="absolute inset-x-0 top-0 p-5 pt-6 bg-gradient-to-b from-stone-900/70 to-transparent text-center pointer-events-none">
-        <h2 class="font-serif font-bold text-2xl text-white drop-shadow">Wer ist da?</h2>
-        <p class="text-xs text-stone-200 mt-1 drop-shadow">Tippe auf dich – Wunschlisten-Einträge werden dir zugeordnet.</p>
+      <div class="absolute inset-x-0 top-0 p-5 pt-6 pb-10 bg-gradient-to-b from-stone-900/85 via-stone-900/50 to-transparent text-center pointer-events-none">
+        <h2 class="font-serif font-bold text-2xl text-white drop-shadow-md">Wer pflanzt?</h2>
+        <p class="text-sm font-medium text-white mt-1.5 drop-shadow-md">Tippe auf dich – Wunschlisten-Einträge werden dir zugeordnet.</p>
       </div>
-      <div id="user-select-buttons" class="absolute inset-x-0 bottom-0 p-5 pb-6 flex"></div>
+      <div id="user-select-buttons" class="absolute inset-x-0 bottom-0 p-5 pb-6 flex gap-3"></div>
     </div>
   </div>
 
@@ -486,16 +486,16 @@
     </div>
   </div>
 
-  <script src="js/i18n.js?v=27"></script>
-  <script src="js/data.js?v=27"></script>
-  <script src="js/state.js?v=27"></script>
-  <script src="js/user.js?v=27"></script>
-  <script src="js/placements.js?v=27"></script>
-  <script src="js/db.js?v=27"></script>
-  <script src="js/ui.js?v=27"></script>
-  <script src="js/navigation.js?v=27"></script>
-  <script src="js/plants.js?v=27"></script>
-  <script src="js/map.js?v=27"></script>
-  <script src="js/app.js?v=27"></script>
+  <script src="js/i18n.js?v=28"></script>
+  <script src="js/data.js?v=28"></script>
+  <script src="js/state.js?v=28"></script>
+  <script src="js/user.js?v=28"></script>
+  <script src="js/placements.js?v=28"></script>
+  <script src="js/db.js?v=28"></script>
+  <script src="js/ui.js?v=28"></script>
+  <script src="js/navigation.js?v=28"></script>
+  <script src="js/plants.js?v=28"></script>
+  <script src="js/map.js?v=28"></script>
+  <script src="js/app.js?v=28"></script>
 </body>
 </html>

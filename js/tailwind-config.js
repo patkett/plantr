@@ -1,4 +1,4 @@
-// Tailwind CSS (Play CDN) theme configuration for the Verdant brand.
+// Tailwind CSS (Play CDN) theme configuration for the SaParadise brand.
 // Must load after the cdn.tailwindcss.com <script> tag.
 tailwind.config = {
   theme: {

@@ -46,7 +46,7 @@ function setCurrentUser(name) {
   document.getElementById('user-select-overlay').classList.add('hidden');
   const btn = document.getElementById('btn-header-db-status');
   if (btn) {
-    btn.title = canOpenDbSettings() ? 'Datenbank-Einstellungen' : 'Verdant';
+    btn.title = canOpenDbSettings() ? 'Datenbank-Einstellungen' : 'SaParadise';
     btn.classList.toggle('cursor-default', !canOpenDbSettings());
   }
   // Leave the settings page if the new user may not see it
@@ -56,9 +56,8 @@ function setCurrentUser(name) {
 // Shown on every app start: the illustration is split into two tappable halves.
 function showUserSelect() {
   const overlay = document.getElementById('user-select-overlay');
-  const last = localStorage.getItem(USER_STORAGE_KEY);
   const container = document.getElementById('user-select-buttons');
   container.innerHTML = USERS.map(u => `
-    <button onclick="setCurrentUser('${u}')" class="user-half flex-1 py-3.5 text-lg font-semibold text-stone-900 bg-white/95 backdrop-blur shadow-xl first:rounded-l-full last:rounded-r-full first:border-r first:border-stone-200 hover:bg-white active:bg-stone-100 transition-colors ${u === last ? 'text-brand-700' : ''}" aria-label="${u}">${u}</button>`).join('');
+    <button onclick="setCurrentUser('${u}')" class="user-half flex-1 py-3.5 text-lg font-semibold text-stone-900 bg-white/95 backdrop-blur shadow-xl rounded-full hover:bg-white active:bg-stone-100 transition-colors" aria-label="${u}">${u}</button>`).join('');
   overlay.classList.remove('hidden');
 }
