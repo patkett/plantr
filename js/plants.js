@@ -68,7 +68,7 @@ function renderPlantList() {
       : '';
 
     return `
-      <div class="${isWishlist ? 'bg-emerald-50/50 border-emerald-100' : 'bg-white'} rounded-2xl p-4 border ${isDeceased ? 'border-stone-300 opacity-80' : isWishlist ? '' : 'border-stone-200/80'} shadow-xs hover:shadow-md transition-all flex flex-col justify-between space-y-3">
+      <div class="bg-white rounded-2xl p-4 border ${isDeceased ? 'border-stone-300 opacity-80' : 'border-stone-200/80'} shadow-xs hover:shadow-md transition-all flex flex-col justify-between space-y-3">
         <div class="flex items-start justify-between">
           <div class="flex items-start space-x-3">
             <div class="w-12 h-12 rounded-2xl bg-stone-100 flex items-center justify-center text-2xl border border-stone-200/60 shrink-0">
@@ -77,7 +77,6 @@ function renderPlantList() {
             <div>
               <div class="flex items-center gap-2">
                 <h3 class="font-bold text-stone-800 text-sm leading-tight">${plant.name}</h3>
-                ${plant.status === 'wishlist' ? `<span class="px-2 py-0.5 text-[9px] bg-emerald-100 text-emerald-700 font-semibold rounded-full border border-emerald-200">Wunsch</span>` : ''}
                 ${isDeceased ? '<span class="px-2 py-0.5 text-[9px] bg-stone-200 text-stone-700 font-semibold rounded-full border border-stone-300">🪦 Verstorben</span>' : ''}
               </div>
               <p class="text-[11px] text-stone-500 font-medium mt-1">${t(plant.category || 'Perennial')}</p>
