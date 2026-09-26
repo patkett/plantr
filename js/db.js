@@ -235,6 +235,17 @@ async function applyPhotoOp(entry) {
   }
 }
 
+// Show the real reason a write failed (once per distinct message) so schema /
+// storage problems don't stay hidden in the console.
+let lastSyncErrorMsg = null;
+function reportSyncError(error) {
+  const msg = (error && (error.message || error.error_description || error.error)) || String(error);
+  console.error('Supabase sync error:', error);
+  if (msg === lastSyncErrorMsg) return;
+  lastSyncErrorMsg = msg;
+  showToast(`Sync-Fehler: ${msg}`, '⚠️');
+}
+
 let flushingOutbox = false;
 async function flushOutbox() {
   if (flushingOutbox || !supabaseClient) return 0;
@@ -246,11 +257,11 @@ async function flushOutbox() {
     for (const entry of items) {
       try {
         const { error } = await applyRemote(entry);
-        if (error) { console.error('Outbox sync error:', error); break; }
+        if (error) { reportSyncError(error); break; }
         synced++;
         setOutbox(getOutbox().filter(i => !(i.table === entry.table && i.id === entry.id)));
       } catch (e) {
-        console.warn('Outbox sync aborted (offline?):', e);
+        reportSyncError(e);
         break;
       }
     }
@@ -267,9 +278,9 @@ async function writeRemote(entry) {
     try {
       const { error } = await applyRemote(entry);
       if (!error) return true;
-      console.error(`Supabase ${entry.op} error:`, error);
+      reportSyncError(error);
     } catch (e) {
-      console.warn('Supabase write failed, queued:', e);
+      reportSyncError(e);
     }
   }
   enqueueOutbox(entry);

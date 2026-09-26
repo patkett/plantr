@@ -79,7 +79,7 @@ function renderMap() {
           ` : ''}
 
           <div class="w-10 h-10 rounded-full bg-white shadow-md border-2 ${isSelected ? 'border-brand-600 marker-active' : (hasSunMismatch ? 'border-amber-400' : 'border-stone-300')} flex items-center justify-center text-xl transition-transform transform group-hover:scale-110 overflow-hidden">
-            ${plantThumbSrc(plant) ? `<img src="${plantThumbSrc(plant)}" alt="" draggable="false" class="w-full h-full object-cover pointer-events-none">` : (plant.emoji || '🪴')}
+            ${plantThumbSrc(plant) ? `<img src="${plantThumbSrc(plant)}" alt="" draggable="false" class="w-full h-full object-cover pointer-events-none">` : leafSvg('w-5 h-5')}
           </div>
           <span class="mt-1 px-2 py-0.5 bg-stone-900/80 text-white text-[10px] font-medium rounded-full shadow-md whitespace-nowrap pointer-events-none">
             ${plant.name}
@@ -202,7 +202,7 @@ function showSelectedBar(placementId) {
   const bar = document.getElementById('map-selected-bar');
   const iconEl = document.getElementById('selected-item-icon');
   const thumb = plantThumbSrc(plant);
-  iconEl.innerHTML = thumb ? `<img src="${thumb}" alt="" class="w-full h-full object-cover rounded-full">` : (plant.emoji || '🪴');
+  iconEl.innerHTML = thumb ? `<img src="${thumb}" alt="" class="w-full h-full object-cover rounded-full">` : leafSvg('w-5 h-5');
   const total = placementCount(plant);
   document.getElementById('selected-item-title').innerText = total > 1 ? `${plant.name} (${total}×)` : plant.name;
 

@@ -229,10 +229,6 @@ function setFormPhotoPreview(src, ownsBlobUrl = false) {
   }
 }
 
-function updateFormPhotoEmoji() {
-  document.getElementById('form-photo-emoji').innerText = document.getElementById('form-emoji').value || '🪴';
-}
-
 function resetFormPhoto(plant = null) {
   formPhotoBlobs = null;
   formPhotoRemove = false;
@@ -240,7 +236,6 @@ function resetFormPhoto(plant = null) {
   document.getElementById('form-photo-file').value = '';
   document.getElementById('form-photo-spinner').classList.add('hidden');
   setFormPhotoPreview(plant ? plantThumbSrc(plant) : null);
-  updateFormPhotoEmoji();
 }
 
 async function handleFormPhotoChange(e) {
@@ -278,7 +273,6 @@ function openPlantModal(plantId = null) {
     title.innerText = 'Pflanze bearbeiten';
     document.getElementById('plant-id').value = plant.id;
     document.getElementById('form-name').value = plant.name;
-    document.getElementById('form-emoji').value = plant.emoji || '🪴';
     document.getElementById('form-status').value = plant.status || 'garden';
     document.getElementById('form-sunlight').value = plant.sunlight || 'Full Sun';
     document.getElementById('form-water').value = plant.water || 'Moderate';
@@ -335,7 +329,7 @@ async function handlePlantFormSubmit(e, skipDuplicateCheck = false) {
     id: id || 'p_' + Date.now(),
     name: document.getElementById('form-name').value,
     botanical_name: existing ? (existing.botanical_name || null) : null,
-    emoji: document.getElementById('form-emoji').value || '🪴',
+    emoji: existing ? existing.emoji || null : null,
     status: document.getElementById('form-status').value,
     sunlight: document.getElementById('form-sunlight').value,
     water: document.getElementById('form-water').value,
