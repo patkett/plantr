@@ -172,16 +172,18 @@ function hasPhoto(plant) {
   return !!plantThumbSrc(plant);
 }
 
-// Round avatar: photo thumbnail or emoji fallback. `extra` = additional classes.
-function plantAvatarHtml(plant, sizeClass = 'w-12 h-12', extra = '', emojiClass = 'text-2xl') {
+// Lucide "leaf" as inline SVG so it survives re-renders without createIcons().
+function leafSvg(cls = 'w-6 h-6') {
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="${cls} text-brand-600 shrink-0"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg>`;
+}
+
+// Round avatar: photo thumbnail or leaf fallback. `extra` = additional classes.
+function plantAvatarHtml(plant, sizeClass = 'w-12 h-12', extra = '', iconClass = 'w-6 h-6') {
   const src = plantThumbSrc(plant);
-  const emoji = plant.emoji || '🪴';
-  if (src) {
-    return `<div class="${sizeClass} rounded-full overflow-hidden bg-stone-100 border border-stone-200/60 shrink-0 ${extra}">
-      <img src="${src}" alt="${plant.name}" class="w-full h-full object-cover" loading="lazy" onerror="this.parentElement.innerHTML='<span class=\\'${emojiClass}\\'>${emoji}</span>';this.parentElement.classList.add('flex','items-center','justify-center')">
-    </div>`;
-  }
-  return `<div class="${sizeClass} rounded-full bg-stone-100 flex items-center justify-center ${emojiClass} border border-stone-200/60 shrink-0 ${extra}">${emoji}</div>`;
+  const base = `${sizeClass} relative rounded-full overflow-hidden bg-stone-100 flex items-center justify-center border border-stone-200/60 shrink-0 ${extra}`;
+  // The leaf sits behind the image; if the image fails to load it is removed and the leaf shows.
+  const img = src ? `<img src="${src}" alt="${plant.name}" class="absolute inset-0 w-full h-full object-cover" loading="lazy" onerror="this.remove()">` : '';
+  return `<div class="${base}">${leafSvg(iconClass)}${img}</div>`;
 }
 
 // --- LIGHTBOX ---
