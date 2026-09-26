@@ -295,9 +295,31 @@ function openPlantModal(plantId = null) {
 
   modal.classList.remove('hidden');
   lucide.createIcons();
+  plantFormSnapshot = plantFormState();
 }
 
-function closePlantModal() {
+// Snapshot of the form taken when the modal opens; used to detect unsaved edits.
+let plantFormSnapshot = null;
+function plantFormState() {
+  const v = id => document.getElementById(id).value;
+  return JSON.stringify({
+    name: v('form-name'), status: v('form-status'), sunlight: v('form-sunlight'),
+    water: v('form-water'), soil: v('form-soil'), category: v('form-category'), notes: v('form-notes'),
+    photo: formPhotoBlobs ? 'new' : (formPhotoRemove ? 'removed' : 'same')
+  });
+}
+
+function closePlantModal(force = false) {
+  if (!force && plantFormSnapshot !== null && plantFormState() !== plantFormSnapshot) {
+    showConfirmDialog(
+      'Änderungen verwerfen?',
+      'Du hast ungespeicherte Änderungen an dieser Pflanze. Ohne Speichern gehen sie verloren.',
+      () => closePlantModal(true),
+      'Verwerfen'
+    );
+    return;
+  }
+  plantFormSnapshot = null;
   document.getElementById('modal-plant-form').classList.add('hidden');
 }
 
@@ -391,13 +413,13 @@ async function handlePlantFormSubmit(e, skipDuplicateCheck = false) {
   }
   renderPlantList();
   renderMap();
-  closePlantModal();
+  closePlantModal(true);
 }
 
 function deletePlantFromModal() {
   const plantId = document.getElementById('plant-id').value;
   if (!plantId) return;
-  closePlantModal();
+  closePlantModal(true);
   deletePlant(plantId);
 }
 
