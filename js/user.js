@@ -39,19 +39,27 @@ function openDbSettings() {
   switchTab('db');
 }
 
-const USER_MODAL_FADE_MS = 320;
+const USER_MODAL_IN_MS = 520;   // matches the CSS enter transition
+const USER_MODAL_OUT_MS = 380;  // matches the CSS exit transition
+const USER_MODAL_OVERLAP_MS = 140; // curtain starts moving while the modal is still fading
 
-// Fades the user-selection modal in/out (it sits above the jungle curtain).
-function setUserModalVisible(visible) {
+const nextFrame = () => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+const wait = ms => new Promise(r => setTimeout(r, ms));
+
+// Animates the user-selection modal in/out (it sits above the jungle curtain):
+// backdrop dims + blurs, the card slides/scales in.
+async function setUserModalVisible(visible) {
   const overlay = document.getElementById('user-select-overlay');
   if (visible) {
     overlay.classList.remove('hidden');
-    void overlay.offsetWidth;
+    await nextFrame(); // ensure the initial (transparent) state is painted first
     overlay.classList.add('is-visible');
-    return Promise.resolve();
+    await wait(USER_MODAL_IN_MS);
+    return;
   }
   overlay.classList.remove('is-visible');
-  return new Promise(r => setTimeout(() => { overlay.classList.add('hidden'); r(); }, USER_MODAL_FADE_MS));
+  await wait(USER_MODAL_OUT_MS);
+  overlay.classList.add('hidden');
 }
 
 // Modal dissolves first, then the leaves swing away and reveal the app.
@@ -59,8 +67,10 @@ async function setCurrentUser(name) {
   currentUser = name;
   localStorage.setItem(USER_STORAGE_KEY, name);
   renderUserChip();
-  await setUserModalVisible(false);
+  const dissolve = setUserModalVisible(false);
+  await wait(USER_MODAL_OUT_MS - USER_MODAL_OVERLAP_MS);
   jungleOpen();
+  await dissolve;
   const btn = document.getElementById('btn-header-db-status');
   if (btn) {
     btn.title = canOpenDbSettings() ? 'Datenbank-Einstellungen' : 'SaParadise';
@@ -78,6 +88,8 @@ async function showUserSelect({ instant = false } = {}) {
   const container = document.getElementById('user-select-buttons');
   container.innerHTML = USERS.map(u => `
     <button onclick="setCurrentUser('${u}')" class="user-half flex-1 py-3.5 text-lg font-semibold text-stone-900 bg-white/95 backdrop-blur shadow-xl rounded-full hover:bg-white active:bg-stone-100 transition-colors" aria-label="${u}">${u}</button>`).join('');
-  await jungleClose({ instant });
+  const closing = jungleClose({ instant });
+  if (!instant) await wait(Math.max(0, JUNGLE_COVER_MS - USER_MODAL_OVERLAP_MS));
+  else await closing;
   await setUserModalVisible(true);
 }
