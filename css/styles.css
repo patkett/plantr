@@ -99,15 +99,19 @@ body {
   .jungle-panel, .jungle-leaf { transition-duration: 0.01s !important; transition-delay: 0s !important; }
 }
 
-/* Garden ground grid: 50px cells with a stronger line every 250px, aligned to
-   the map origin (225/325 offset). Beds snap to the 50px cells. */
+/* Garden ground grid, aligned to the map origin. Cell size and origin offset
+   come from js/map.js (applyMapGeometry sets the custom properties). */
 .map-grid {
+  --map-grid: 50px;
+  --map-grid-major: 250px;
+  --map-ox: 0px;
+  --map-oy: 0px;
   background-color: #fafaf9;
   background-image:
     linear-gradient(to right, rgba(35, 60, 53, 0.16) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(35, 60, 53, 0.16) 1px, transparent 1px),
     linear-gradient(to right, rgba(35, 60, 53, 0.07) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(35, 60, 53, 0.07) 1px, transparent 1px);
-  background-size: 250px 250px, 250px 250px, 50px 50px, 50px 50px;
-  background-position: 225px 325px, 225px 325px, 225px 325px, 225px 325px;
+  background-size: var(--map-grid-major) var(--map-grid-major), var(--map-grid-major) var(--map-grid-major), var(--map-grid) var(--map-grid), var(--map-grid) var(--map-grid);
+  background-position: var(--map-ox) var(--map-oy);
 }

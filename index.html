@@ -17,9 +17,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,600;1,400&display=swap" rel="stylesheet">
 
-  <script src="js/tailwind-config.js?v=34"></script>
+  <script src="js/tailwind-config.js?v=35"></script>
 
-  <link rel="stylesheet" href="css/styles.css?v=34">
+  <link rel="stylesheet" href="css/styles.css?v=35">
 </head>
 
 <body class="h-full flex flex-col font-sans text-stone-800 bg-stone-100 antialiased overflow-hidden select-none">
@@ -131,9 +131,9 @@
       <!-- Garden Map Scrollable Surface Canvas -->
       <div id="map-viewport" class="flex-1 overflow-auto relative p-6 grid-pattern flex items-center justify-center cursor-grab active:cursor-grabbing">
         <!-- Zoom wrapper keeps the scrollable area correct at any pinch-zoom level -->
-        <div id="canvas-zoom-wrapper" class="my-auto shrink-0" style="width: 1350px; height: 1950px;">
-        <!-- Main Interactive Map Bounds Container -->
-        <div id="garden-canvas" class="w-[1350px] h-[1950px] bg-stone-50 map-grid rounded-2xl border-2 border-stone-300 shadow-lg relative overflow-hidden transition-all origin-top-left">
+        <div id="canvas-zoom-wrapper" class="my-auto shrink-0">
+        <!-- Main Interactive Map Bounds Container (sized by applyMapGeometry in js/map.js) -->
+        <div id="garden-canvas" class="bg-stone-50 map-grid rounded-2xl border-2 border-stone-300 shadow-lg relative overflow-hidden transition-all origin-top-left">
           
           <!-- Compass Overlay -->
           <div class="absolute top-3 right-3 bg-white/80 backdrop-blur rounded-full px-2.5 py-1 text-[10px] font-bold text-stone-500 border border-stone-200 shadow-xs flex items-center gap-1 z-10">
@@ -141,11 +141,11 @@
           </div>
 
           <!-- ZONES & PLANT MARKERS LAYER -->
-          <div id="zones-layer" class="absolute pointer-events-auto" style="left: 225px; top: 325px; width: 900px; height: 1300px;">
+          <div id="zones-layer" class="absolute pointer-events-auto">
             <!-- Garden Beds render here dynamically -->
           </div>
 
-          <div id="markers-layer" class="absolute pointer-events-none z-10" style="left: 225px; top: 325px; width: 900px; height: 1300px;">
+          <div id="markers-layer" class="absolute pointer-events-none z-10">
             <!-- Plant markers render here dynamically -->
           </div>
 
@@ -518,17 +518,19 @@
     </div>
   </div>
 
-  <script src="js/i18n.js?v=34"></script>
-  <script src="js/data.js?v=34"></script>
-  <script src="js/state.js?v=34"></script>
-  <script src="js/user.js?v=34"></script>
-  <script src="js/placements.js?v=34"></script>
-  <script src="js/db.js?v=34"></script>
-  <script src="js/photos.js?v=34"></script>
-  <script src="js/ui.js?v=34"></script>
-  <script src="js/navigation.js?v=34"></script>
-  <script src="js/plants.js?v=34"></script>
-  <script src="js/map.js?v=34"></script>
-  <script src="js/app.js?v=34"></script>
+  <script src="js/i18n.js?v=35"></script>
+  <script src="js/data.js?v=35"></script>
+  <script src="js/state.js?v=35"></script>
+  <script src="js/jungle.js?v=35"></script>
+  <script src="js/user.js?v=35"></script>
+  <script src="js/placements.js?v=35"></script>
+  <script src="js/db.js?v=35"></script>
+  <script src="js/photos.js?v=35"></script>
+  <script src="js/ui.js?v=35"></script>
+  <script src="js/navigation.js?v=35"></script>
+  <script src="js/plants.js?v=35"></script>
+  <script src="js/map.js?v=35"></script>
+  <script src="js/map-viewport.js?v=35"></script>
+  <script src="js/app.js?v=35"></script>
 </body>
 </html>

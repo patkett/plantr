@@ -26,11 +26,26 @@ function todayIsoDate() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+// Parses a date string; plain 'YYYY-MM-DD' values are read as local dates
+// (new Date('YYYY-MM-DD') would treat them as UTC midnight and can shift the day).
+function parseDate(value) {
+  if (!value) return null;
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  const d = m ? new Date(+m[1], +m[2] - 1, +m[3]) : new Date(value);
+  return isNaN(d) ? null : d;
+}
+
+// dd.mm.yyyy or null
+function formatDeDate(value) {
+  const d = parseDate(value);
+  return d ? d.toLocaleDateString('de-DE') : null;
+}
+
 // "3 Monate" / "2 Jahre" since planting (until death for deceased plants)
 function plantedDateText(plant) {
-  if (!plant.planted_at) return '';
-  const start = new Date(plant.planted_at);
-  const end = plant.status === 'deceased' && plant.died_at ? new Date(plant.died_at) : new Date();
+  const start = parseDate(plant.planted_at);
+  if (!start) return '';
+  const end = (plant.status === 'deceased' && parseDate(plant.died_at)) || new Date();
   const days = Math.floor((end - start) / 86400000);
   if (isNaN(days) || days < 0) return '';
   if (days < 30) return days === 1 ? '1 Tag' : `${days} Tage`;
@@ -78,11 +93,11 @@ function renderPlantList() {
     const bedNames = [...new Set((plant.placements || []).map(pl => zones.find(z => z.id === pl.bed_id)).filter(Boolean).map(z => z.name))];
     const isDeceased = plant.status === 'deceased';
     const isWishlist = plant.status === 'wishlist';
-    const diedDate = plant.died_at ? new Date(plant.died_at).toLocaleDateString('de-DE') : null;
-    const plantedDate = plant.planted_at ? new Date(plant.planted_at).toLocaleDateString('de-DE') : null;
+    const diedDate = formatDeDate(plant.died_at);
+    const plantedDate = formatDeDate(plant.planted_at);
     const lifespan = plantedDateText(plant);
     const deaths = plant.deaths || [];
-    const fmtDeath = d => `${d.bed ? `Beet <strong>${d.bed}</strong>` : 'ohne Beet'}${d.sunlight ? ` (${t(d.sunlight)})` : ''}${d.died_at ? ` am ${new Date(d.died_at).toLocaleDateString('de-DE')}` : ''}`;
+    const fmtDeath = d => `${d.bed ? `Beet <strong>${d.bed}</strong>` : 'ohne Beet'}${d.sunlight ? ` (${t(d.sunlight)})` : ''}${d.died_at ? ` am ${formatDeDate(d.died_at)}` : ''}`;
     // Deaths of single specimens while the plant itself is still alive
     const historyHtml = !isDeceased && deaths.length > 0
       ? `<p class="text-xs text-stone-600 bg-stone-100 p-2.5 rounded-xl border border-stone-200 leading-relaxed">🪦 ${deaths.length === 1 ? 'Ein Exemplar verstorben' : `${deaths.length} Exemplare verstorben`}: ${deaths.map(fmtDeath).join('; ')}</p>`
