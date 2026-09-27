@@ -13,10 +13,10 @@ const JUNGLE_OUTLINE = 2.6;   // stroke widths in viewBox units (200 x 300)
 const JUNGLE_VEIN = 1.5;
 // Leaf motion (seconds). The JS timeline below is derived from these so the
 // swap happens once the slowest leaf has arrived.
-const JUNGLE_LEAF_DUR_MIN = 0.41;
-const JUNGLE_LEAF_DUR_MAX = 0.79;
-const JUNGLE_LEAF_DELAY_MAX = 0.19;
-const JUNGLE_COVER_MS = Math.round((JUNGLE_LEAF_DUR_MAX + JUNGLE_LEAF_DELAY_MAX) * 1000); // 980
+const JUNGLE_LEAF_DUR_MIN = 0.35;
+const JUNGLE_LEAF_DUR_MAX = 0.67;
+const JUNGLE_LEAF_DELAY_MAX = 0.16;
+const JUNGLE_COVER_MS = Math.round((JUNGLE_LEAF_DUR_MAX + JUNGLE_LEAF_DELAY_MAX) * 1000); // 830
 
 let jungleState = 'open'; // 'open' | 'closing' | 'closed' | 'opening'
 let jungleLeafSeq = 0;
