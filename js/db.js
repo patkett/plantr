@@ -114,11 +114,15 @@ async function fetchAllData() {
     try {
       const { data: bedsData, error: bedsErr } = await supabaseClient.from('garden_beds').select('*');
       const { data: plantsData, error: plantsErr } = await supabaseClient.from('plants').select('*');
+      // Links table may not exist yet on older databases – fall back to local copy
+      const { data: linksData, error: linksErr } = await supabaseClient.from('links').select('*');
 
       if (!bedsErr && !plantsErr) {
         connected = true;
         zones = bedsData || [];
         plants = plantsData || [];
+        if (!linksErr) { links = linksData || []; saveLinksLocal(); }
+        else { links = loadLinksLocal(); reportSyncError(linksErr); }
         // Photos still waiting in the outbox are not on the server yet
         const pendingIds = new Set(getOutbox().filter(i => i.table === 'photos' && i.op === 'upload').map(i => i.id));
         plants.forEach(p => { if (pendingIds.has(p.id)) p.photo_pending = true; });
@@ -137,6 +141,7 @@ async function fetchAllData() {
 
     plants = storedPlants ? JSON.parse(storedPlants) : DEFAULT_PLANTS;
     zones = storedZones ? JSON.parse(storedZones) : DEFAULT_ZONES;
+    links = loadLinksLocal();
 
     const migrated = migrateLegacySeedData();
     if (!storedPlants || migrated) savePlantsLocal();
@@ -172,6 +177,10 @@ function migrateLegacySeedData() {
   plants.forEach(p => apply(p, DEFAULT_PLANTS));
   zones.forEach(z => apply(z, DEFAULT_ZONES));
   return changed;
+}
+
+function loadLinksLocal() {
+  try { return JSON.parse(localStorage.getItem('verdant_links')) || []; } catch (e) { return []; }
 }
 
 function savePlantsLocal() {

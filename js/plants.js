@@ -21,6 +21,22 @@ function setLightFilter(filter) {
   renderPlantList();
 }
 
+// Status select in the plant form: moving to the garden fills in today's
+// date (if empty), moving (back) to the wishlist clears it.
+function onFormStatusChange() {
+  const status = document.getElementById('form-status').value;
+  const dateInput = document.getElementById('form-planted-at');
+  if (status === 'garden' && !dateInput.value) dateInput.value = todayIsoDate();
+  if (status === 'wishlist') dateInput.value = '';
+}
+
+function clearSearch() {
+  const input = document.getElementById('input-search');
+  input.value = '';
+  renderPlantList();
+  input.focus();
+}
+
 function todayIsoDate() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -58,6 +74,7 @@ function plantedDateText(plant) {
 function renderPlantList() {
   const container = document.getElementById('plant-cards-container');
   const searchTerm = document.getElementById('input-search').value.toLowerCase();
+  document.getElementById('btn-clear-search').classList.toggle('hidden', !searchTerm);
   const statusFilter = document.getElementById('select-status-filter').value;
 
   const filtered = plants.filter(plant => {
@@ -327,7 +344,8 @@ function openPlantModal(plantId = null) {
     const statusFilter = document.getElementById('select-status-filter').value;
     document.getElementById('form-status').value = ['garden', 'wishlist'].includes(statusFilter) ? statusFilter : 'garden';
     if (lightFilter !== 'all') document.getElementById('form-sunlight').value = lightFilter;
-    document.getElementById('form-planted-at').value = todayIsoDate();
+    // Wishlist entries have no planting date yet; it is set when they reach the garden
+    document.getElementById('form-planted-at').value = document.getElementById('form-status').value === 'garden' ? todayIsoDate() : '';
     resetFormPhoto();
   }
 
@@ -401,7 +419,7 @@ async function handlePlantFormSubmit(e, skipDuplicateCheck = false) {
     died_in_bed: existing ? existing.died_in_bed || null : null,
     died_bed_sunlight: existing ? existing.died_bed_sunlight || null : null,
     died_at: existing ? existing.died_at || null : null,
-    planted_at: document.getElementById('form-planted-at').value || null,
+    planted_at: document.getElementById('form-planted-at').value || (document.getElementById('form-status').value === 'garden' && (!existing || existing.status === 'wishlist') ? todayIsoDate() : null),
     wished_by: existing ? existing.wished_by || null : null,
     photo_url: existing && !formPhotoRemove ? existing.photo_url || null : null,
     thumb_url: existing && !formPhotoRemove ? existing.thumb_url || null : null,

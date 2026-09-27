@@ -66,6 +66,19 @@ ALTER TABLE public.plants ADD COLUMN IF NOT EXISTS thumb_url TEXT;
 ALTER TABLE public.plants ADD COLUMN IF NOT EXISTS planted_at DATE;
 NOTIFY pgrst, 'reload schema';
 
+-- 2h. Useful links / bookmarks shared by both gardeners.
+CREATE TABLE IF NOT EXISTS public.links (
+  id TEXT PRIMARY KEY,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  title TEXT,
+  url TEXT NOT NULL,
+  added_by TEXT
+);
+ALTER TABLE public.links ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow public read/write on links" ON public.links;
+CREATE POLICY "Allow public read/write on links" ON public.links FOR ALL USING (true) WITH CHECK (true);
+NOTIFY pgrst, 'reload schema';
+
 -- 2f. Storage bucket for plant photos (public read) with anon read/write.
 INSERT INTO storage.buckets (id, name, public)
 VALUES ('plant-photos', 'plant-photos', true)

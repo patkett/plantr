@@ -1,27 +1,16 @@
-// --- TAB SWITCHER ---
+// --- TAB NAVIGATION ---
+const NAV_ACTIVE = 'flex flex-col items-center text-brand-700 transition-colors';
+const NAV_INACTIVE = 'flex flex-col items-center text-stone-400 hover:text-stone-600 transition-colors';
+const TABS = ['directory', 'map', 'links', 'db'];
 
 function switchTab(tab) {
   activeTab = tab;
-  const dirView = document.getElementById('view-directory');
-  const mapView = document.getElementById('view-map');
-  const dbView = document.getElementById('view-db');
-
-  const navBtnDir = document.getElementById('nav-btn-directory');
-  const navBtnMap = document.getElementById('nav-btn-map');
-
-  [dirView, mapView, dbView].forEach(v => v.classList.add('hidden'));
-
-  navBtnDir.className = "flex flex-col items-center text-stone-400 hover:text-stone-600 transition-colors";
-  navBtnMap.className = "flex flex-col items-center text-stone-400 hover:text-stone-600 transition-colors";
-
-  if (tab === 'directory') {
-    dirView.classList.remove('hidden');
-    navBtnDir.className = "flex flex-col items-center text-brand-700 transition-colors";
-  } else if (tab === 'map') {
-    mapView.classList.remove('hidden');
-    navBtnMap.className = "flex flex-col items-center text-brand-700 transition-colors";
-    renderMap();
-  } else if (tab === 'db') {
-    dbView.classList.remove('hidden');
-  }
+  TABS.forEach(name => {
+    const view = document.getElementById(`view-${name}`);
+    if (view) view.classList.toggle('hidden', name !== tab);
+    const btn = document.getElementById(`nav-btn-${name}`);
+    if (btn) btn.className = name === tab ? NAV_ACTIVE : NAV_INACTIVE;
+  });
+  if (tab === 'map') renderMap();
+  if (tab === 'links') renderLinks();
 }

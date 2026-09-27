@@ -30,6 +30,10 @@ function fallbackCopyText(text) {
 }
 
 let toastTimeout = null;
+function escapeHtml(text) {
+  return String(text ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
 function showToast(message, icon = '🌿') {
   const toast = document.getElementById('verdant-toast');
   document.getElementById('toast-icon').innerText = icon;
