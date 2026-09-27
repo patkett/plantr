@@ -10,8 +10,22 @@ const MAP_OY = 325;
 // --- GARDEN CANVAS: BEDS, PLANT MARKERS, AND SUNLIGHT MISMATCH DETECTION ---
 
 let mapZoom = 1;
-const MAP_ZOOM_MIN = 0.5;
 const MAP_ZOOM_MAX = 2.5;
+// Beds snap to this grid (map coordinates); plants stay freely positioned.
+const MAP_GRID = 50;
+const ZONE_MIN_W = 150;
+const ZONE_MIN_H = 100;
+
+const snapToGrid = v => Math.round(v / MAP_GRID) * MAP_GRID;
+const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+
+// Smallest zoom level: the whole ground fits into the viewport
+function getMinMapZoom() {
+  const viewport = document.getElementById('map-viewport');
+  if (!viewport) return 0.25;
+  const fit = Math.min((viewport.clientWidth - 24) / MAP_W, (viewport.clientHeight - 24) / MAP_H);
+  return Math.max(0.1, Math.min(0.5, fit));
+}
 
 let resizingZoneId = null;   // zone currently showing its resize handle
 let editingZoneId = null;    // zone whose edit bar is open
@@ -285,8 +299,8 @@ async function handleZoneFormSubmit(e) {
     id: 'z_' + Date.now(),
     name: document.getElementById('zone-name').value,
     sunlight: document.getElementById('zone-light').value,
-    x: 100 + (zones.length * 40) % 400,
-    y: 100 + (zones.length * 40) % 300,
+    x: snapToGrid(100 + (zones.length * 50) % 400),
+    y: snapToGrid(100 + (zones.length * 50) % 300),
     width: 300,
     height: 200
   };
@@ -408,8 +422,8 @@ function onZoneMove(e) {
 
   const w = zone.width || zone.w || 300;
   const h = zone.height || zone.h || 200;
-  const newX = Math.max(-MAP_OX, Math.min(MAP_W - MAP_OX - w, Math.round(moveZoneStartX + (point.x - moveStartX))));
-  const newY = Math.max(-MAP_OY, Math.min(MAP_H - MAP_OY - h, Math.round(moveZoneStartY + (point.y - moveStartY))));
+  const newX = clamp(snapToGrid(moveZoneStartX + (point.x - moveStartX)), -MAP_OX, MAP_W - MAP_OX - w);
+  const newY = clamp(snapToGrid(moveZoneStartY + (point.y - moveStartY)), -MAP_OY, MAP_H - MAP_OY - h);
   const dx = newX - zone.x;
   const dy = newY - zone.y;
   zone.x = newX;
@@ -496,8 +510,8 @@ function onZoneResize(e) {
   const deltaX = point.x - resizeStartX;
   const deltaY = point.y - resizeStartY;
 
-  zone.width = Math.max(160, Math.min(MAP_W - 40, Math.round(resizeStartWidth + deltaX)));
-  zone.height = Math.max(120, Math.min(MAP_H - 30, Math.round(resizeStartHeight + deltaY)));
+  zone.width = clamp(snapToGrid(resizeStartWidth + deltaX), ZONE_MIN_W, MAP_W - MAP_OX - zone.x);
+  zone.height = clamp(snapToGrid(resizeStartHeight + deltaY), ZONE_MIN_H, MAP_H - MAP_OY - zone.y);
   delete zone.w;
   delete zone.h;
 
@@ -671,7 +685,7 @@ let pinchStartDistance = null;
 let pinchStartZoom = 1;
 
 function setMapZoom(newZoom) {
-  mapZoom = Math.min(MAP_ZOOM_MAX, Math.max(MAP_ZOOM_MIN, newZoom));
+  mapZoom = clamp(newZoom, getMinMapZoom(), MAP_ZOOM_MAX);
   const canvas = document.getElementById('garden-canvas');
   const wrapper = document.getElementById('canvas-zoom-wrapper');
   if (canvas) canvas.style.transform = `scale(${mapZoom})`;
