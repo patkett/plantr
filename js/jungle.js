@@ -153,6 +153,29 @@ function buildJungleCurtain() {
 const jungleReducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const jungleWait = ms => new Promise(r => setTimeout(r, ms));
 
+// Browser chrome (iOS Safari toolbar) follows the curtain colour instead of
+// snapping between green and the page background.
+const JUNGLE_PANEL_COLOR = '#2b5a3a';
+const jungleThemeMeta = () => document.querySelector('meta[name="theme-color"]');
+const JUNGLE_THEME_DEFAULT = (jungleThemeMeta() && jungleThemeMeta().content) || '#f5f5f4';
+let jungleThemeAnim = 0;
+function jungleThemeColor(to, ms) {
+  const meta = jungleThemeMeta();
+  if (!meta) return;
+  cancelAnimationFrame(jungleThemeAnim);
+  const hex = c => c.replace('#', '').match(/.{2}/g).map(h => parseInt(h, 16));
+  const from = hex(meta.content), dest = hex(to);
+  if (ms <= 0) { meta.content = to; return; }
+  const start = performance.now();
+  const step = now => {
+    const t = Math.min(1, (now - start) / ms);
+    const e = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+    meta.content = '#' + from.map((f, i) => Math.round(f + (dest[i] - f) * e).toString(16).padStart(2, '0')).join('');
+    if (t < 1) jungleThemeAnim = requestAnimationFrame(step);
+  };
+  jungleThemeAnim = requestAnimationFrame(step);
+}
+
 // Closes the leaves over the screen and keeps them closed. Resolves once the
 // slowest leaf has arrived. `instant` skips the animation (used on app start,
 // where the curtain is already closed when the app becomes visible).
@@ -165,6 +188,7 @@ async function jungleClose({ instant = false } = {}) {
   curtain.classList.remove('hidden');
   void curtain.offsetWidth; // start from the "open" position
   curtain.classList.add('is-closed');
+  jungleThemeColor(JUNGLE_PANEL_COLOR, quick ? 0 : 420);
   if (!quick) await jungleWait(JUNGLE_COVER_MS);
   curtain.classList.remove('no-transition');
   jungleState = 'closed';
@@ -176,7 +200,16 @@ async function jungleOpen() {
   const curtain = buildJungleCurtain();
   jungleState = 'opening';
   curtain.classList.remove('is-closed');
-  if (!jungleReducedMotion()) await jungleWait(JUNGLE_COVER_MS);
+  if (!jungleReducedMotion()) {
+    jungleThemeColor(JUNGLE_THEME_DEFAULT, JUNGLE_COVER_MS);
+    // Fade the stragglers out while the slowest leaves are still leaving
+    await jungleWait(Math.round(JUNGLE_COVER_MS * 0.62));
+    curtain.classList.add('is-fading');
+    await jungleWait(340);
+  } else {
+    jungleThemeColor(JUNGLE_THEME_DEFAULT, 0);
+  }
   curtain.classList.add('hidden');
+  curtain.classList.remove('is-fading');
   jungleState = 'open';
 }
