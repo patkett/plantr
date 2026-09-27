@@ -77,8 +77,29 @@ body {
 #jungle-curtain.no-transition .jungle-panel,
 #jungle-curtain.no-transition .jungle-leaf { transition: none !important; }
 /* User selection sits above the closed curtain and dissolves in/out */
-#user-select-overlay { opacity: 0; transition: opacity 0.32s ease; }
-#user-select-overlay.is-visible { opacity: 1; }
+#user-select-overlay {
+  background-color: rgba(28, 25, 23, 0);
+  -webkit-backdrop-filter: blur(0px);
+  backdrop-filter: blur(0px);
+  transition: background-color 0.38s ease, -webkit-backdrop-filter 0.38s ease, backdrop-filter 0.38s ease;
+}
+#user-select-overlay.is-visible {
+  background-color: rgba(28, 25, 23, 0.8);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  transition-duration: 0.52s;
+}
+#user-select-overlay .user-select-card {
+  opacity: 0;
+  transform: translateY(28px) scale(0.94);
+  transition: opacity 0.38s ease, transform 0.38s cubic-bezier(0.4, 0, 1, 1);
+  will-change: opacity, transform;
+}
+#user-select-overlay.is-visible .user-select-card {
+  opacity: 1;
+  transform: none;
+  transition: opacity 0.52s ease, transform 0.52s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
 .jungle-panel {
   position: absolute;
   top: 0;
