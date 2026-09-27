@@ -74,13 +74,18 @@ body {
   pointer-events: none;
 }
 #jungle-curtain.is-closed { pointer-events: auto; }
+#jungle-curtain.no-transition .jungle-panel,
+#jungle-curtain.no-transition .jungle-leaf { transition: none !important; }
+/* User selection sits above the closed curtain and dissolves in/out */
+#user-select-overlay { opacity: 0; transition: opacity 0.32s ease; }
+#user-select-overlay.is-visible { opacity: 1; }
 .jungle-panel {
   position: absolute;
   top: 0;
   bottom: 0;
   width: 52%;
   background: #2b5a3a; /* jungle backdrop, same green family as the leaves */
-  transition: transform 0.75s cubic-bezier(0.65, 0, 0.35, 1);
+  transition: transform 0.56s cubic-bezier(0.65, 0, 0.35, 1);
 }
 .jungle-panel.left  { left: 0;  transform: translateX(-102%); }
 .jungle-panel.right { right: 0; transform: translateX(102%); }
