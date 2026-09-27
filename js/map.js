@@ -268,7 +268,13 @@ function showSelectedBar(placementId) {
   const zone = zones.find(z => z.id === placement.bed_id);
   const zoneText = zone ? zone.name : 'Kein Beet zugewiesen';
 
-  document.getElementById('selected-item-subtitle').innerText = `${zoneText} • ${sunLabel(plant.sunlight)}`;
+  const plantedText = placement.planted_at ? `gepflanzt ${formatDeDate(placement.planted_at)}` : 'Pflanzdatum unbekannt';
+  document.getElementById('selected-item-subtitle').innerText = `${zoneText} • ${sunLabel(plant.sunlight)} • ${plantedText}`;
+
+  const dateInput = document.getElementById('input-planted-item');
+  dateInput.value = placement.planted_at || '';
+  dateInput.max = todayIsoDate();
+  dateInput.onchange = () => setPlacementPlantedAt(placementId, dateInput.value);
 
   // Light conflict gets its own line so it is never truncated
   const conflictEl = document.getElementById('selected-item-conflict');

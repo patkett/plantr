@@ -1,7 +1,7 @@
 // --- PLANT PLACEMENTS & DEATH HISTORY HELPERS ---
 // A plant (species) can be placed on the map multiple times. Each placement
-// is { id, bed_id, x, y }. Deaths of single specimens are kept in
-// plant.deaths as { bed, sunlight, died_at }.
+// (specimen) is { id, bed_id, x, y, planted_at }. Deaths of single specimens
+// are kept in plant.deaths as { bed, sunlight, planted_at, died_at }.
 
 // Upgrades legacy records (single x_pos/y_pos/bed_id) to the placements model.
 function normalizePlant(plant) {
@@ -10,6 +10,8 @@ function normalizePlant(plant) {
     plant.placements.push({ id: `${plant.id}_1`, bed_id: plant.bed_id || null, x: plant.x_pos, y: plant.y_pos });
   }
   if (!Array.isArray(plant.deaths)) plant.deaths = [];
+  // Specimens recorded before per-specimen dates inherit the plant-level date
+  plant.placements.forEach(pl => { if (pl.planted_at === undefined) pl.planted_at = plant.planted_at || null; });
   syncLegacyPosition(plant);
   return plant;
 }
@@ -42,7 +44,7 @@ function findPlacement(placementId) {
 
 function addPlacement(plant, x, y) {
   normalizePlant(plant);
-  const placement = { id: `${plant.id}_${Date.now()}`, bed_id: bedIdAt(x, y), x, y };
+  const placement = { id: `${plant.id}_${Date.now()}`, bed_id: bedIdAt(x, y), x, y, planted_at: todayIsoDate() };
   plant.placements.push(placement);
   syncLegacyPosition(plant);
   return placement;
@@ -74,6 +76,5 @@ function isPlaceable(plant) {
 function promoteToGarden(plant) {
   if (plant.status !== 'wishlist') return false;
   plant.status = 'garden';
-  if (!plant.planted_at) plant.planted_at = todayIsoDate();
   return true;
 }
