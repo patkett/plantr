@@ -3,8 +3,6 @@
 // is { id, bed_id, x, y }. Deaths of single specimens are kept in
 // plant.deaths as { bed, sunlight, died_at }.
 
-const MAP_CENTER = { x: 450, y: 300 };
-
 // Upgrades legacy records (single x_pos/y_pos/bed_id) to the placements model.
 function normalizePlant(plant) {
   if (!Array.isArray(plant.placements)) plant.placements = [];
@@ -42,7 +40,7 @@ function findPlacement(placementId) {
   return null;
 }
 
-function addPlacement(plant, x = MAP_CENTER.x, y = MAP_CENTER.y) {
+function addPlacement(plant, x, y) {
   normalizePlant(plant);
   const placement = { id: `${plant.id}_${Date.now()}`, bed_id: bedIdAt(x, y), x, y };
   plant.placements.push(placement);
