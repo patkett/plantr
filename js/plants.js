@@ -99,7 +99,6 @@ function renderPlantList() {
 
     const count = placementCount(plant);
     const isMapped = count > 0;
-    const bedNames = [...new Set((plant.placements || []).map(pl => zones.find(z => z.id === pl.bed_id)).filter(Boolean).map(z => z.name))];
     const isDeceased = plant.status === 'deceased';
     const isWishlist = plant.status === 'wishlist';
     const diedDate = formatDeDate(plant.died_at);
@@ -170,7 +169,6 @@ function renderPlantList() {
           <span class="px-2.5 py-0.5 rounded-full bg-stone-100 text-stone-600 border border-stone-200">
             🌱 ${t(plant.soil || 'Well-Drained')}
           </span>
-          ${bedNames.map(n => `<span class="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">🏡 ${n}</span>`).join('')}
         </div>
 
         ${plant.notes ? `<p class="text-xs text-stone-600 bg-stone-50 p-2.5 rounded-xl border border-stone-200/60 leading-relaxed">${plant.notes}</p>` : ''}
@@ -188,14 +186,10 @@ function renderPlantList() {
             <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
           </button>
         </div>` : `<div class="pt-1 flex items-center justify-between border-t border-stone-100">
-          <span class="text-[11px] font-medium ${isMapped ? 'text-emerald-700' : 'text-stone-400'} flex items-center gap-1">
-            <i data-lucide="${isMapped ? 'check-circle' : 'circle-dashed'}" class="w-3.5 h-3.5"></i>
-            ${isMapped ? `${count}× auf Karte platziert` : 'Nicht auf Karte'}
-          </span>
+          ${isMapped ? `<button onclick="placePlantOnMap('${plant.id}')" title="Weiteres Exemplar platzieren" class="text-xs font-semibold text-stone-500 hover:text-brand-800 flex items-center gap-1">
+            <i data-lucide="plus" class="w-3.5 h-3.5"></i><span>Pflanze setzen</span>
+          </button>` : '<span></span>'}
           <div class="flex items-center gap-3">
-            ${isMapped ? `<button onclick="placePlantOnMap('${plant.id}')" title="Weiteres Exemplar platzieren" class="text-xs font-semibold text-stone-500 hover:text-brand-800 flex items-center gap-0.5">
-              <i data-lucide="plus" class="w-3.5 h-3.5"></i><span>Weitere</span>
-            </button>` : ''}
             <button onclick="jumpToMapWithPlant('${plant.id}')" class="text-xs font-semibold text-brand-700 hover:text-brand-800 flex items-center gap-1">
               <span>${isMapped ? 'Auf Karte ansehen' : 'Auf Karte platzieren'}</span>
               <i data-lucide="arrow-right" class="w-3 h-3"></i>
