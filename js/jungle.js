@@ -13,13 +13,12 @@ const JUNGLE_OUTLINE = 2.6;   // stroke widths in viewBox units (200 x 300)
 const JUNGLE_VEIN = 1.5;
 // Leaf motion (seconds). The JS timeline below is derived from these so the
 // swap happens once the slowest leaf has arrived.
-const JUNGLE_LEAF_DUR_MIN = 0.55;
-const JUNGLE_LEAF_DUR_MAX = 1.05;
-const JUNGLE_LEAF_DELAY_MAX = 0.25;
-const JUNGLE_COVER_MS = Math.round((JUNGLE_LEAF_DUR_MAX + JUNGLE_LEAF_DELAY_MAX) * 1000); // 1300
-const JUNGLE_HOLD_MS = 200;   // fully covered while the screen underneath is swapped
+const JUNGLE_LEAF_DUR_MIN = 0.41;
+const JUNGLE_LEAF_DUR_MAX = 0.79;
+const JUNGLE_LEAF_DELAY_MAX = 0.19;
+const JUNGLE_COVER_MS = Math.round((JUNGLE_LEAF_DUR_MAX + JUNGLE_LEAF_DELAY_MAX) * 1000); // 980
 
-let jungleRunning = false;
+let jungleState = 'open'; // 'open' | 'closing' | 'closed' | 'opening'
 let jungleLeafSeq = 0;
 
 const jungleSvg = inner => `<svg viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg" stroke="${JUNGLE_INK}" stroke-linejoin="round" stroke-linecap="round">${inner}</svg>`;
@@ -151,25 +150,33 @@ function buildJungleCurtain() {
   return curtain;
 }
 
-function jungleTransition(swapFn) {
-  if (jungleRunning || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    swapFn();
-    return;
-  }
+const jungleReducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const jungleWait = ms => new Promise(r => setTimeout(r, ms));
+
+// Closes the leaves over the screen and keeps them closed. Resolves once the
+// slowest leaf has arrived. `instant` skips the animation (used on app start,
+// where the curtain is already closed when the app becomes visible).
+async function jungleClose({ instant = false } = {}) {
+  if (jungleState !== 'open') return;
   const curtain = buildJungleCurtain();
-  jungleRunning = true;
+  jungleState = 'closing';
+  const quick = instant || jungleReducedMotion();
+  curtain.classList.toggle('no-transition', quick);
   curtain.classList.remove('hidden');
-  // Force a layout so the transition starts from the "open" position
-  void curtain.offsetWidth;
+  void curtain.offsetWidth; // start from the "open" position
   curtain.classList.add('is-closed');
-  setTimeout(() => {
-    swapFn();
-    setTimeout(() => {
-      curtain.classList.remove('is-closed');
-      setTimeout(() => {
-        curtain.classList.add('hidden');
-        jungleRunning = false;
-      }, JUNGLE_COVER_MS);
-    }, JUNGLE_HOLD_MS);
-  }, JUNGLE_COVER_MS);
+  if (!quick) await jungleWait(JUNGLE_COVER_MS);
+  curtain.classList.remove('no-transition');
+  jungleState = 'closed';
+}
+
+// Swings the leaves away again and reveals the screen underneath.
+async function jungleOpen() {
+  if (jungleState !== 'closed') return;
+  const curtain = buildJungleCurtain();
+  jungleState = 'opening';
+  curtain.classList.remove('is-closed');
+  if (!jungleReducedMotion()) await jungleWait(JUNGLE_COVER_MS);
+  curtain.classList.add('hidden');
+  jungleState = 'open';
 }

@@ -39,11 +39,28 @@ function openDbSettings() {
   switchTab('db');
 }
 
-function setCurrentUser(name) {
+const USER_MODAL_FADE_MS = 320;
+
+// Fades the user-selection modal in/out (it sits above the jungle curtain).
+function setUserModalVisible(visible) {
+  const overlay = document.getElementById('user-select-overlay');
+  if (visible) {
+    overlay.classList.remove('hidden');
+    void overlay.offsetWidth;
+    overlay.classList.add('is-visible');
+    return Promise.resolve();
+  }
+  overlay.classList.remove('is-visible');
+  return new Promise(r => setTimeout(() => { overlay.classList.add('hidden'); r(); }, USER_MODAL_FADE_MS));
+}
+
+// Modal dissolves first, then the leaves swing away and reveal the app.
+async function setCurrentUser(name) {
   currentUser = name;
   localStorage.setItem(USER_STORAGE_KEY, name);
   renderUserChip();
-  jungleTransition(() => document.getElementById('user-select-overlay').classList.add('hidden'));
+  await setUserModalVisible(false);
+  jungleOpen();
   const btn = document.getElementById('btn-header-db-status');
   if (btn) {
     btn.title = canOpenDbSettings() ? 'Datenbank-Einstellungen' : 'SaParadise';
@@ -53,11 +70,14 @@ function setCurrentUser(name) {
   if (!canOpenDbSettings() && !document.getElementById('view-db').classList.contains('hidden')) switchTab('directory');
 }
 
-// Shown on every app start: the illustration is split into two tappable halves.
-function showUserSelect() {
-  const overlay = document.getElementById('user-select-overlay');
+// Shown on every app start and via the header chip: the leaves close over the
+// current view first, then the modal fades in on top of them. On app start the
+// curtain is already closed so the modal appears without delay.
+async function showUserSelect({ instant = false } = {}) {
+  if (jungleState !== 'open') return;
   const container = document.getElementById('user-select-buttons');
   container.innerHTML = USERS.map(u => `
     <button onclick="setCurrentUser('${u}')" class="user-half flex-1 py-3.5 text-lg font-semibold text-stone-900 bg-white/95 backdrop-blur shadow-xl rounded-full hover:bg-white active:bg-stone-100 transition-colors" aria-label="${u}">${u}</button>`).join('');
-  jungleTransition(() => overlay.classList.remove('hidden'));
+  await jungleClose({ instant });
+  await setUserModalVisible(true);
 }
