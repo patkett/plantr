@@ -63,3 +63,38 @@ body {
 #plant-list-scroll { overscroll-behavior-y: contain; }
 @keyframes pull-spin { to { transform: rotate(360deg); } }
 #pull-indicator .refreshing { animation: pull-spin 1s linear infinite; }
+
+/* --- Jungle curtain: monstera leaves that close over the screen while the
+   user selection opens/closes, then swing away again. --- */
+#jungle-curtain {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  overflow: hidden;
+  pointer-events: none;
+}
+#jungle-curtain.is-closed { pointer-events: auto; }
+.jungle-panel {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 52%;
+  background: #233c35;
+  transition: transform 0.75s cubic-bezier(0.65, 0, 0.35, 1);
+}
+.jungle-panel.left  { left: 0;  transform: translateX(-102%); }
+.jungle-panel.right { right: 0; transform: translateX(102%); }
+#jungle-curtain.is-closed .jungle-panel { transform: translateX(0); }
+.jungle-leaf {
+  position: absolute;
+  transition-property: transform;
+  transition-timing-function: cubic-bezier(0.5, 0, 0.3, 1);
+  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.35));
+  will-change: transform;
+}
+.jungle-leaf.left  { transform: translateX(-130%) rotate(var(--rot-out)); }
+.jungle-leaf.right { transform: translateX(130%) rotate(var(--rot-out)); }
+#jungle-curtain.is-closed .jungle-leaf { transform: translateX(0) rotate(var(--rot)); }
+@media (prefers-reduced-motion: reduce) {
+  .jungle-panel, .jungle-leaf { transition-duration: 0.01s !important; transition-delay: 0s !important; }
+}

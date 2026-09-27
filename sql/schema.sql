@@ -34,6 +34,7 @@ CREATE TABLE IF NOT EXISTS public.plants (
   died_in_bed TEXT,
   died_bed_sunlight TEXT,
   died_at TIMESTAMPTZ,
+  planted_at DATE,
   placements JSONB DEFAULT '[]'::jsonb,
   deaths JSONB DEFAULT '[]'::jsonb,
   wished_by TEXT
@@ -60,6 +61,9 @@ ALTER TABLE public.plants ADD COLUMN IF NOT EXISTS wished_by TEXT;
 --     only keeps the public URLs.
 ALTER TABLE public.plants ADD COLUMN IF NOT EXISTS photo_url TEXT;
 ALTER TABLE public.plants ADD COLUMN IF NOT EXISTS thumb_url TEXT;
+
+-- 2g. Migration: planting date, used to see how long a plant lived.
+ALTER TABLE public.plants ADD COLUMN IF NOT EXISTS planted_at DATE;
 NOTIFY pgrst, 'reload schema';
 
 -- 2f. Storage bucket for plant photos (public read) with anon read/write.

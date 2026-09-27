@@ -1,6 +1,11 @@
-// Logical size of the garden canvas in px (must match #garden-canvas in index.html)
-const MAP_W = 900;
-const MAP_H = 1300;
+// Logical size of the garden canvas in px (must match #garden-canvas in index.html).
+// The ground was enlarged by 25% on each side; existing coordinates stay in the
+// original 900x1300 system and are rendered with a fixed origin offset so nothing
+// stored in the database had to be moved.
+const MAP_W = 1350;
+const MAP_H = 1950;
+const MAP_OX = 225;   // origin offset of the coordinate system inside the canvas
+const MAP_OY = 325;
 
 // --- GARDEN CANVAS: BEDS, PLANT MARKERS, AND SUNLIGHT MISMATCH DETECTION ---
 
@@ -69,7 +74,7 @@ function renderMap() {
            onmousedown="startMarkerDrag(event, '${pl.id}')"
            ontouchstart="startMarkerDrag(event, '${pl.id}')"
            onclick="togglePlantMarker(event, '${pl.id}')"
-           class="absolute -translate-x-1/2 -translate-y-1/2 cursor-grab active:cursor-grabbing z-20 group pointer-events-auto">
+           class="absolute -translate-x-1/2 -translate-y-1/2 ${isSelected ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'} z-20 group pointer-events-auto">
 
         <div class="flex flex-col items-center">
           <div class="relative">
@@ -98,8 +103,8 @@ function getCanvasPoint(clientX, clientY) {
   const canvas = document.getElementById('garden-canvas');
   const rect = canvas.getBoundingClientRect();
   return {
-    x: (clientX - rect.left) / mapZoom,
-    y: (clientY - rect.top) / mapZoom
+    x: (clientX - rect.left) / mapZoom - MAP_OX,
+    y: (clientY - rect.top) / mapZoom - MAP_OY
   };
 }
 
@@ -108,7 +113,12 @@ let draggingPlacementId = null;
 let dragOffsetX = 0;
 let dragOffsetY = 0;
 
+// Markers can only be dragged once they are selected; an unselected marker
+// lets the gesture through so panning/pinching over it still works and a
+// plain tap selects it (see togglePlantMarker).
 function startMarkerDrag(e, placementId) {
+  if (selectedPlacementId !== placementId) return;
+  if (e.touches && e.touches.length > 1) return;
   e.stopPropagation();
   if (e.cancelable) e.preventDefault();
 
@@ -116,9 +126,7 @@ function startMarkerDrag(e, placementId) {
   if (!found) return;
 
   draggingPlacementId = placementId;
-  selectedPlacementId = placementId;
   closeZoneBar(false);
-  showSelectedBar(placementId);
 
   const clientX = e.touches ? e.touches[0].clientX : e.clientX;
   const clientY = e.touches ? e.touches[0].clientY : e.clientY;
@@ -144,8 +152,8 @@ function onMarkerDrag(e) {
   let newX = Math.round(point.x - dragOffsetX);
   let newY = Math.round(point.y - dragOffsetY);
 
-  newX = Math.max(20, Math.min(MAP_W - 20, newX));
-  newY = Math.max(20, Math.min(MAP_H - 20, newY));
+  newX = Math.max(20 - MAP_OX, Math.min(MAP_W - MAP_OX - 20, newX));
+  newY = Math.max(20 - MAP_OY, Math.min(MAP_H - MAP_OY - 20, newY));
 
   const found = findPlacement(draggingPlacementId);
   if (found) {
@@ -252,7 +260,8 @@ function jumpToMapWithPlant(plantId) {
   switchTab('map');
   if (placementCount(plant) === 0) {
     const promoted = promoteToGarden(plant);
-    addPlacement(plant);
+    const center = getViewportCenterPoint();
+    addPlacement(plant, center.x, center.y);
     syncSavePlant(plant);
     renderPlantList();
     if (promoted) showToast(`${plant.name} ist jetzt im Garten (von der Wunschliste)`, '🌱');
@@ -399,8 +408,8 @@ function onZoneMove(e) {
 
   const w = zone.width || zone.w || 300;
   const h = zone.height || zone.h || 200;
-  const newX = Math.max(0, Math.min(MAP_W - w, Math.round(moveZoneStartX + (point.x - moveStartX))));
-  const newY = Math.max(0, Math.min(MAP_H - h, Math.round(moveZoneStartY + (point.y - moveStartY))));
+  const newX = Math.max(-MAP_OX, Math.min(MAP_W - MAP_OX - w, Math.round(moveZoneStartX + (point.x - moveStartX))));
+  const newY = Math.max(-MAP_OY, Math.min(MAP_H - MAP_OY - h, Math.round(moveZoneStartY + (point.y - moveStartY))));
   const dx = newX - zone.x;
   const dy = newY - zone.y;
   zone.x = newX;
@@ -618,14 +627,28 @@ function closeUnplacedDrawer() {
   document.getElementById('drawer-unplaced').classList.add('translate-y-full');
 }
 
-// Adds another specimen of the plant at the map centre (slightly offset if
-// that spot is already taken by the same plant).
+// Centre of the part of the map currently visible in the viewport (map coords)
+function getViewportCenterPoint() {
+  const viewport = document.getElementById('map-viewport');
+  const canvas = document.getElementById('garden-canvas');
+  if (!viewport || !canvas) return { ...MAP_CENTER };
+  const vRect = viewport.getBoundingClientRect();
+  const point = getCanvasPoint(vRect.left + vRect.width / 2, vRect.top + vRect.height / 2);
+  return {
+    x: Math.round(Math.max(20 - MAP_OX, Math.min(MAP_W - MAP_OX - 20, point.x))),
+    y: Math.round(Math.max(20 - MAP_OY, Math.min(MAP_H - MAP_OY - 20, point.y)))
+  };
+}
+
+// Adds another specimen of the plant at the centre of the visible viewport
+// (slightly offset if that spot is already taken by the same plant).
 async function placePlantOnMap(plantId) {
   const plant = plants.find(p => p.id === plantId);
   if (!plant || !isPlaceable(plant)) return;
   const promoted = promoteToGarden(plant);
-  const offset = (plant.placements || []).filter(pl => Math.abs(pl.x - MAP_CENTER.x) < 60 && Math.abs(pl.y - MAP_CENTER.y) < 60).length;
-  const placement = addPlacement(plant, MAP_CENTER.x + offset * 30, MAP_CENTER.y + offset * 30);
+  const center = getViewportCenterPoint();
+  const offset = (plant.placements || []).filter(pl => Math.abs(pl.x - center.x) < 60 && Math.abs(pl.y - center.y) < 60).length;
+  const placement = addPlacement(plant, center.x + offset * 30, center.y + offset * 30);
   await syncSavePlant(plant);
   closeUnplacedDrawer();
   switchTab('map');
@@ -705,14 +728,15 @@ function stopMapPan() {
 }
 
 function handleViewportTouchStart(e) {
-  if (isInteractiveMapTarget(e.target)) return;
-
   if (e.touches.length === 2) {
+    // Pinch always zooms, even when a finger lands on a marker or bed
+    if (draggingPlacementId || activeResizeZoneId || movingZoneId) return;
     if (e.cancelable) e.preventDefault();
     isPanning = false;
     pinchStartDistance = getTouchDistance(e.touches);
     pinchStartZoom = mapZoom;
   } else if (e.touches.length === 1) {
+    if (isInteractiveMapTarget(e.target)) return;
     if (e.cancelable) e.preventDefault();
     const viewport = document.getElementById('map-viewport');
     isPanning = true;
