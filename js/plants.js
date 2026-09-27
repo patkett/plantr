@@ -21,15 +21,6 @@ function setLightFilter(filter) {
   renderPlantList();
 }
 
-// Status select in the plant form: moving to the garden fills in today's
-// date (if empty), moving (back) to the wishlist clears it.
-function onFormStatusChange() {
-  const status = document.getElementById('form-status').value;
-  const dateInput = document.getElementById('form-planted-at');
-  if (status === 'garden' && !dateInput.value) dateInput.value = todayIsoDate();
-  if (status === 'wishlist') dateInput.value = '';
-}
-
 function clearSearch() {
   const input = document.getElementById('input-search');
   input.value = '';
@@ -57,11 +48,11 @@ function formatDeDate(value) {
   return d ? d.toLocaleDateString('de-DE') : null;
 }
 
-// "3 Monate" / "2 Jahre" since planting (until death for deceased plants)
-function plantedDateText(plant) {
-  const start = parseDate(plant.planted_at);
+// "3 Monate" / "2 Jahre" between planting and death (or today)
+function lifespanText(plantedAt, diedAt) {
+  const start = parseDate(plantedAt);
   if (!start) return '';
-  const end = (plant.status === 'deceased' && parseDate(plant.died_at)) || new Date();
+  const end = parseDate(diedAt) || new Date();
   const days = Math.floor((end - start) / 86400000);
   if (isNaN(days) || days < 0) return '';
   if (days < 30) return days === 1 ? '1 Tag' : `${days} Tage`;
@@ -111,10 +102,25 @@ function renderPlantList() {
     const isDeceased = plant.status === 'deceased';
     const isWishlist = plant.status === 'wishlist';
     const diedDate = formatDeDate(plant.died_at);
-    const plantedDate = formatDeDate(plant.planted_at);
-    const lifespan = plantedDateText(plant);
     const deaths = plant.deaths || [];
-    const fmtDeath = d => `${d.bed ? `Beet <strong>${d.bed}</strong>` : 'ohne Beet'}${d.sunlight ? ` (${t(d.sunlight)})` : ''}${d.died_at ? ` am ${formatDeDate(d.died_at)}` : ''}`;
+    const fmtSpan = (from, to) => {
+      const span = lifespanText(from, to);
+      const f = formatDeDate(from), d = formatDeDate(to);
+      if (f && d) return ` ${f} – ${d}${span ? ` · ${span}` : ''}`;
+      if (d) return ` am ${d}`;
+      return f ? ` seit ${f}` : '';
+    };
+    const fmtDeath = d => `${d.bed ? `Beet <strong>${d.bed}</strong>` : 'ohne Beet'}${d.sunlight ? ` (${t(d.sunlight)})` : ''}${fmtSpan(d.planted_at, d.died_at)}`;
+    // Living specimens with their individual planting dates
+    const specimens = (plant.placements || []).map(pl => {
+      const bed = zones.find(z => z.id === pl.bed_id);
+      const f = formatDeDate(pl.planted_at);
+      const span = lifespanText(pl.planted_at, null);
+      return `${bed ? `Beet <strong>${bed.name}</strong>` : 'ohne Beet'}${f ? ` seit ${f}${span ? ` (${span})` : ''}` : ' · Pflanzdatum unbekannt'}`;
+    });
+    const specimensHtml = specimens.length > 0
+      ? `<p class="text-xs text-stone-600 bg-emerald-50/60 p-2.5 rounded-xl border border-emerald-100 leading-relaxed">🌱 ${specimens.slice(0, 3).join('; ')}${specimens.length > 3 ? `; <span class="text-stone-500">+${specimens.length - 3} weitere</span>` : ''}</p>`
+      : '';
     // Deaths of single specimens while the plant itself is still alive
     const historyHtml = !isDeceased && deaths.length > 0
       ? `<p class="text-xs text-stone-600 bg-stone-100 p-2.5 rounded-xl border border-stone-200 leading-relaxed">🪦 ${deaths.length === 1 ? 'Ein Exemplar verstorben' : `${deaths.length} Exemplare verstorben`}: ${deaths.map(fmtDeath).join('; ')}</p>`
@@ -132,7 +138,7 @@ function renderPlantList() {
                 <h3 class="font-bold text-stone-800 text-sm leading-tight">${plant.name}</h3>
                 ${isDeceased ? '<span class="px-2 py-0.5 text-[9px] bg-stone-200 text-stone-700 font-semibold rounded-full border border-stone-300">🪦 Verstorben</span>' : ''}
               </div>
-              <p class="text-[11px] text-stone-500 font-medium mt-1">${t(plant.category || 'Perennial')}${plantedDate ? ` · <span title="Pflanzdatum">🌱 ${plantedDate}${lifespan ? ` (${lifespan})` : ''}</span>` : ''}</p>
+              <p class="text-[11px] text-stone-500 font-medium mt-1">${t(plant.category || 'Perennial')}</p>
             </div>
           </div>
 
@@ -158,7 +164,8 @@ function renderPlantList() {
         </div>
 
         ${plant.notes ? `<p class="text-xs text-stone-600 bg-stone-50 p-2.5 rounded-xl border border-stone-200/60 leading-relaxed">${plant.notes}</p>` : ''}
-        ${isDeceased ? `<p class="text-xs text-stone-600 bg-stone-100 p-2.5 rounded-xl border border-stone-200 leading-relaxed">🪦 Verstorben${plant.died_in_bed ? ` im Beet <strong>${plant.died_in_bed}</strong>` : ''}${plant.died_bed_sunlight ? ` (${t(plant.died_bed_sunlight)})` : ''}${diedDate ? ` am ${diedDate}` : ''}${deaths.length > 1 ? `<br><span class="text-stone-500">Frühere Exemplare: ${deaths.slice(0, -1).map(fmtDeath).join('; ')}</span>` : ''}</p>` : ''}
+        ${specimensHtml}
+        ${isDeceased ? `<p class="text-xs text-stone-600 bg-stone-100 p-2.5 rounded-xl border border-stone-200 leading-relaxed">🪦 Verstorben${plant.died_in_bed ? ` im Beet <strong>${plant.died_in_bed}</strong>` : ''}${plant.died_bed_sunlight ? ` (${t(plant.died_bed_sunlight)})` : ''}${fmtSpan(deaths.length ? deaths[deaths.length - 1].planted_at : null, plant.died_at)}${deaths.length > 1 ? `<br><span class="text-stone-500">Frühere Exemplare: ${deaths.slice(0, -1).map(fmtDeath).join('; ')}</span>` : ''}</p>` : ''}
         ${historyHtml}
 
         ${isDeceased ? '' : isWishlist ? `<div class="pt-1 flex items-center justify-between border-t border-stone-100">
@@ -206,9 +213,9 @@ function renderPlantList() {
 // Records the death of one specimen (bed + light conditions + date) and
 // removes that marker. The plant itself only becomes "deceased" when its
 // last specimen dies.
-function recordDeath(plant, bedId) {
+function recordDeath(plant, bedId, plantedAt = null) {
   const bed = zones.find(z => z.id === bedId);
-  const death = { bed: bed ? bed.name : null, sunlight: bed ? bed.sunlight : null, died_at: new Date().toISOString() };
+  const death = { bed: bed ? bed.name : null, sunlight: bed ? bed.sunlight : null, planted_at: plantedAt || null, died_at: new Date().toISOString() };
   plant.deaths = [...(plant.deaths || []), death];
   return death;
 }
@@ -226,7 +233,7 @@ async function markPlacementDeceased(placementId) {
   const found = findPlacement(placementId);
   if (!found) return;
   const { plant, placement } = found;
-  const death = recordDeath(plant, placement.bed_id);
+  const death = recordDeath(plant, placement.bed_id, placement.planted_at);
   removePlacementFromPlant(plant, placementId);
   const lastOne = placementCount(plant) === 0 && plant.status === 'garden';
   if (lastOne) markPlantFullyDeceased(plant, death);
@@ -240,6 +247,17 @@ async function markPlacementDeceased(placementId) {
       : `Exemplar von ${plant.name} als verstorben vermerkt${death.bed ? ` (Beet: ${death.bed})` : ''} – ${placementCount(plant)}× noch auf der Karte`,
     '🪦'
   );
+}
+
+// Changes the planting date of a single specimen (from the map bar).
+async function setPlacementPlantedAt(placementId, value) {
+  const found = findPlacement(placementId);
+  if (!found) return;
+  found.placement.planted_at = value || null;
+  await syncSavePlant(found.plant);
+  renderPlantList();
+  if (selectedPlacementId === placementId) showSelectedBar(placementId);
+  showToast(value ? `Pflanzdatum: ${formatDeDate(value)}` : 'Pflanzdatum entfernt', '📅');
 }
 
 function confirmMarkPlacementDeceased(placementId) {
@@ -332,7 +350,6 @@ function openPlantModal(plantId = null) {
     document.getElementById('form-soil').value = plant.soil || 'Well-Drained';
     document.getElementById('form-category').value = plant.category || 'Perennial';
     document.getElementById('form-notes').value = plant.notes || '';
-    document.getElementById('form-planted-at').value = plant.planted_at || '';
     document.getElementById('btn-modal-delete-plant').classList.remove('hidden');
     resetFormPhoto(plant);
   } else {
@@ -344,8 +361,6 @@ function openPlantModal(plantId = null) {
     const statusFilter = document.getElementById('select-status-filter').value;
     document.getElementById('form-status').value = ['garden', 'wishlist'].includes(statusFilter) ? statusFilter : 'garden';
     if (lightFilter !== 'all') document.getElementById('form-sunlight').value = lightFilter;
-    // Wishlist entries have no planting date yet; it is set when they reach the garden
-    document.getElementById('form-planted-at').value = document.getElementById('form-status').value === 'garden' ? todayIsoDate() : '';
     resetFormPhoto();
   }
 
@@ -360,7 +375,7 @@ function plantFormState() {
   const v = id => document.getElementById(id).value;
   return JSON.stringify({
     name: v('form-name'), status: v('form-status'), sunlight: v('form-sunlight'),
-    water: v('form-water'), soil: v('form-soil'), category: v('form-category'), notes: v('form-notes'), planted_at: v('form-planted-at'),
+    water: v('form-water'), soil: v('form-soil'), category: v('form-category'), notes: v('form-notes'),
     photo: formPhotoBlobs ? 'new' : (formPhotoRemove ? 'removed' : 'same')
   });
 }
@@ -419,7 +434,7 @@ async function handlePlantFormSubmit(e, skipDuplicateCheck = false) {
     died_in_bed: existing ? existing.died_in_bed || null : null,
     died_bed_sunlight: existing ? existing.died_bed_sunlight || null : null,
     died_at: existing ? existing.died_at || null : null,
-    planted_at: document.getElementById('form-planted-at').value || (document.getElementById('form-status').value === 'garden' && (!existing || existing.status === 'wishlist') ? todayIsoDate() : null),
+    planted_at: existing ? existing.planted_at || null : null, // legacy plant-level date; specimens carry their own
     wished_by: existing ? existing.wished_by || null : null,
     photo_url: existing && !formPhotoRemove ? existing.photo_url || null : null,
     thumb_url: existing && !formPhotoRemove ? existing.thumb_url || null : null,
@@ -436,7 +451,7 @@ async function handlePlantFormSubmit(e, skipDuplicateCheck = false) {
     if (!existing || existing.status !== 'deceased') {
       // Every specimen still on the map dies with its bed recorded
       const placed = plantData.placements;
-      if (placed.length > 0) placed.forEach(pl => recordDeath(plantData, pl.bed_id));
+      if (placed.length > 0) placed.forEach(pl => recordDeath(plantData, pl.bed_id, pl.planted_at));
       else recordDeath(plantData, null);
       markPlantFullyDeceased(plantData, plantData.deaths[plantData.deaths.length - 1]);
     }
