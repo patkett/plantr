@@ -55,6 +55,7 @@ function lifespanText(plantedAt, diedAt) {
   const end = parseDate(diedAt) || new Date();
   const days = Math.floor((end - start) / 86400000);
   if (isNaN(days) || days < 0) return '';
+  if (days === 0) return 'heute';
   if (days < 30) return days === 1 ? '1 Tag' : `${days} Tage`;
   const months = Math.floor(days / 30.44);
   if (months < 12) return months === 1 ? '1 Monat' : `${months} Monate`;
@@ -116,10 +117,19 @@ function renderPlantList() {
       const bed = zones.find(z => z.id === pl.bed_id);
       const f = formatDeDate(pl.planted_at);
       const span = lifespanText(pl.planted_at, null);
-      return `${bed ? `Beet <strong>${bed.name}</strong>` : 'ohne Beet'}${f ? ` seit ${f}${span ? ` (${span})` : ''}` : ' · Pflanzdatum unbekannt'}`;
+      return `<li class="flex items-baseline justify-between gap-3 py-1 border-t border-emerald-100 first:border-t-0">
+        <span class="font-medium text-stone-700 truncate">${bed ? bed.name : 'Ohne Beet'}</span>
+        <span class="shrink-0 text-stone-500 tabular-nums">${f ? `${f}${span ? ` <span class="text-stone-400">· ${span}</span>` : ''}` : 'unbekannt'}</span>
+      </li>`;
     });
     const specimensHtml = specimens.length > 0
-      ? `<p class="text-xs text-stone-600 bg-emerald-50/60 p-2.5 rounded-xl border border-emerald-100 leading-relaxed">🌱 ${specimens.slice(0, 3).join('; ')}${specimens.length > 3 ? `; <span class="text-stone-500">+${specimens.length - 3} weitere</span>` : ''}</p>`
+      ? `<details class="specimens text-xs bg-emerald-50/60 rounded-xl border border-emerald-100">
+          <summary class="flex items-center justify-between px-2.5 py-2 cursor-pointer select-none text-stone-700 font-semibold">
+            <span>Gepflanzt seit${specimens.length > 1 ? ` <span class="font-normal text-stone-500">(${specimens.length} Exemplare)</span>` : ''}</span>
+            <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-stone-500 transition-transform"></i>
+          </summary>
+          <ul class="px-2.5 pb-2">${specimens.join('')}</ul>
+        </details>`
       : '';
     // Deaths of single specimens while the plant itself is still alive
     const historyHtml = !isDeceased && deaths.length > 0

@@ -153,3 +153,8 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
   background-size: var(--map-grid-major) var(--map-grid-major), var(--map-grid-major) var(--map-grid-major), var(--map-grid) var(--map-grid), var(--map-grid) var(--map-grid);
   background-position: var(--map-ox) var(--map-oy);
 }
+
+/* Collapsible specimen list on directory cards */
+details.specimens > summary { list-style: none; }
+details.specimens > summary::-webkit-details-marker { display: none; }
+details.specimens[open] > summary svg { transform: rotate(180deg); }

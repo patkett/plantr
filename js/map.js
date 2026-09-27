@@ -273,6 +273,7 @@ function showSelectedBar(placementId) {
 
   const dateInput = document.getElementById('input-planted-item');
   dateInput.value = placement.planted_at || '';
+  document.getElementById('label-planted-item').innerText = placement.planted_at ? formatDeDate(placement.planted_at) : 'Pflanzdatum';
   dateInput.max = todayIsoDate();
   dateInput.onchange = () => setPlacementPlantedAt(placementId, dateInput.value);
 
