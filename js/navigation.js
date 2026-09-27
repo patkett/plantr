@@ -1,7 +1,7 @@
 // --- TAB NAVIGATION ---
 const NAV_ACTIVE = 'flex flex-col items-center text-brand-700 transition-colors';
 const NAV_INACTIVE = 'flex flex-col items-center text-stone-400 hover:text-stone-600 transition-colors';
-const TABS = ['directory', 'map', 'links', 'db'];
+const TABS = ['directory', 'map', 'stats', 'links', 'db'];
 
 function switchTab(tab) {
   activeTab = tab;
@@ -12,5 +12,6 @@ function switchTab(tab) {
     if (btn) btn.className = name === tab ? NAV_ACTIVE : NAV_INACTIVE;
   });
   if (tab === 'map') renderMap();
+  if (tab === 'stats') renderStats();
   if (tab === 'links') renderLinks();
 }
