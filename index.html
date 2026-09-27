@@ -18,9 +18,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,600;1,400&display=swap" rel="stylesheet">
 
-  <script src="js/tailwind-config.js?v=44"></script>
+  <script src="js/tailwind-config.js?v=45"></script>
 
-  <link rel="stylesheet" href="css/styles.css?v=44">
+  <link rel="stylesheet" href="css/styles.css?v=45">
 </head>
 
 <body class="h-full flex flex-col font-sans text-stone-800 bg-stone-100 antialiased overflow-hidden select-none">
@@ -224,6 +224,11 @@
 
     </section>
 
+    <!-- Statistics -->
+    <section id="view-stats" class="flex-1 flex flex-col h-full overflow-y-auto bg-stone-100 p-4 pb-24 hidden">
+      <div id="stats-container" class="max-w-xl mx-auto w-full space-y-4"></div>
+    </section>
+
     <!-- Useful links / bookmarks -->
     <section id="view-links" class="flex-1 flex flex-col h-full overflow-y-auto bg-stone-100 p-4 pb-24 hidden">
       <div class="max-w-xl mx-auto w-full space-y-4">
@@ -332,9 +337,14 @@
         <span class="text-[11px] font-medium mt-1">Gartenkarte</span>
       </button>
 
+      <button id="nav-btn-stats" onclick="switchTab('stats')" class="flex flex-col items-center text-stone-400 hover:text-stone-600 transition-colors">
+        <i data-lucide="bar-chart-3" class="w-5 h-5"></i>
+        <span class="text-[11px] font-medium mt-1">Statistiken</span>
+      </button>
+
       <button id="nav-btn-links" onclick="switchTab('links')" class="flex flex-col items-center text-stone-400 hover:text-stone-600 transition-colors">
         <i data-lucide="bookmark" class="w-5 h-5"></i>
-        <span class="text-[11px] font-medium mt-1">Nützliche Links</span>
+        <span class="text-[11px] font-medium mt-1">Links</span>
       </button>
 
     </div>
@@ -557,20 +567,21 @@
     </div>
   </div>
 
-  <script src="js/i18n.js?v=44"></script>
-  <script src="js/data.js?v=44"></script>
-  <script src="js/state.js?v=44"></script>
-  <script src="js/jungle.js?v=44"></script>
-  <script src="js/user.js?v=44"></script>
-  <script src="js/placements.js?v=44"></script>
-  <script src="js/db.js?v=44"></script>
-  <script src="js/photos.js?v=44"></script>
-  <script src="js/ui.js?v=44"></script>
-  <script src="js/navigation.js?v=44"></script>
-  <script src="js/plants.js?v=44"></script>
-  <script src="js/links.js?v=44"></script>
-  <script src="js/map.js?v=44"></script>
-  <script src="js/map-viewport.js?v=44"></script>
-  <script src="js/app.js?v=44"></script>
+  <script src="js/i18n.js?v=45"></script>
+  <script src="js/data.js?v=45"></script>
+  <script src="js/state.js?v=45"></script>
+  <script src="js/jungle.js?v=45"></script>
+  <script src="js/user.js?v=45"></script>
+  <script src="js/placements.js?v=45"></script>
+  <script src="js/db.js?v=45"></script>
+  <script src="js/photos.js?v=45"></script>
+  <script src="js/ui.js?v=45"></script>
+  <script src="js/navigation.js?v=45"></script>
+  <script src="js/plants.js?v=45"></script>
+  <script src="js/links.js?v=45"></script>
+  <script src="js/stats.js?v=45"></script>
+  <script src="js/map.js?v=45"></script>
+  <script src="js/map-viewport.js?v=45"></script>
+  <script src="js/app.js?v=45"></script>
 </body>
 </html>

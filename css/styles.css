@@ -118,12 +118,13 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
   position: absolute;
   top: 0;
   bottom: 0;
-  width: 52%;
-  background: #2b5a3a; /* jungle backdrop, same green family as the leaves */
+  width: 72%;
+  /* Jungle backdrop fades out towards the middle so the leaves, not two hard
+     panels, are what visibly closes the screen. Panels overlap 44%. */
   transition: transform 0.48s cubic-bezier(0.65, 0, 0.35, 1);
 }
-.jungle-panel.left  { left: 0;  transform: translateX(-102%); }
-.jungle-panel.right { right: 0; transform: translateX(102%); }
+.jungle-panel.left  { left: 0;  transform: translateX(-102%); background: linear-gradient(to right, #2b5a3a 0%, #2b5a3a 52%, rgba(43, 90, 58, 0.85) 68%, rgba(43, 90, 58, 0.35) 86%, rgba(43, 90, 58, 0) 100%); }
+.jungle-panel.right { right: 0; transform: translateX(102%); background: linear-gradient(to left, #2b5a3a 0%, #2b5a3a 52%, rgba(43, 90, 58, 0.85) 68%, rgba(43, 90, 58, 0.35) 86%, rgba(43, 90, 58, 0) 100%); }
 #jungle-curtain.is-closed .jungle-panel { transform: translateX(0); }
 .jungle-leaf {
   position: absolute;
