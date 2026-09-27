@@ -74,5 +74,6 @@ function isPlaceable(plant) {
 function promoteToGarden(plant) {
   if (plant.status !== 'wishlist') return false;
   plant.status = 'garden';
+  if (!plant.planted_at) plant.planted_at = todayIsoDate();
   return true;
 }
