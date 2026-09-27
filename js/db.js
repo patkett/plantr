@@ -307,6 +307,7 @@ function plantPayload(plant) {
     died_in_bed: plant.died_in_bed || null,
     died_bed_sunlight: plant.died_bed_sunlight || null,
     died_at: plant.died_at || null,
+    planted_at: plant.planted_at || null,
     placements: plant.placements || [],
     deaths: plant.deaths || [],
     wished_by: plant.wished_by || null,

@@ -21,6 +21,25 @@ function setLightFilter(filter) {
   renderPlantList();
 }
 
+function todayIsoDate() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+// "3 Monate" / "2 Jahre" since planting (until death for deceased plants)
+function plantedDateText(plant) {
+  if (!plant.planted_at) return '';
+  const start = new Date(plant.planted_at);
+  const end = plant.status === 'deceased' && plant.died_at ? new Date(plant.died_at) : new Date();
+  const days = Math.floor((end - start) / 86400000);
+  if (isNaN(days) || days < 0) return '';
+  if (days < 30) return days === 1 ? '1 Tag' : `${days} Tage`;
+  const months = Math.floor(days / 30.44);
+  if (months < 12) return months === 1 ? '1 Monat' : `${months} Monate`;
+  const years = Math.floor(days / 365.25);
+  return years === 1 ? '1 Jahr' : `${years} Jahre`;
+}
+
 function renderPlantList() {
   const container = document.getElementById('plant-cards-container');
   const searchTerm = document.getElementById('input-search').value.toLowerCase();
@@ -60,6 +79,8 @@ function renderPlantList() {
     const isDeceased = plant.status === 'deceased';
     const isWishlist = plant.status === 'wishlist';
     const diedDate = plant.died_at ? new Date(plant.died_at).toLocaleDateString('de-DE') : null;
+    const plantedDate = plant.planted_at ? new Date(plant.planted_at).toLocaleDateString('de-DE') : null;
+    const lifespan = plantedDateText(plant);
     const deaths = plant.deaths || [];
     const fmtDeath = d => `${d.bed ? `Beet <strong>${d.bed}</strong>` : 'ohne Beet'}${d.sunlight ? ` (${t(d.sunlight)})` : ''}${d.died_at ? ` am ${new Date(d.died_at).toLocaleDateString('de-DE')}` : ''}`;
     // Deaths of single specimens while the plant itself is still alive
@@ -79,7 +100,7 @@ function renderPlantList() {
                 <h3 class="font-bold text-stone-800 text-sm leading-tight">${plant.name}</h3>
                 ${isDeceased ? '<span class="px-2 py-0.5 text-[9px] bg-stone-200 text-stone-700 font-semibold rounded-full border border-stone-300">🪦 Verstorben</span>' : ''}
               </div>
-              <p class="text-[11px] text-stone-500 font-medium mt-1">${t(plant.category || 'Perennial')}</p>
+              <p class="text-[11px] text-stone-500 font-medium mt-1">${t(plant.category || 'Perennial')}${plantedDate ? ` · <span title="Pflanzdatum">🌱 ${plantedDate}${lifespan ? ` (${lifespan})` : ''}</span>` : ''}</p>
             </div>
           </div>
 
@@ -279,6 +300,7 @@ function openPlantModal(plantId = null) {
     document.getElementById('form-soil').value = plant.soil || 'Well-Drained';
     document.getElementById('form-category').value = plant.category || 'Perennial';
     document.getElementById('form-notes').value = plant.notes || '';
+    document.getElementById('form-planted-at').value = plant.planted_at || '';
     document.getElementById('btn-modal-delete-plant').classList.remove('hidden');
     resetFormPhoto(plant);
   } else {
@@ -290,6 +312,7 @@ function openPlantModal(plantId = null) {
     const statusFilter = document.getElementById('select-status-filter').value;
     document.getElementById('form-status').value = ['garden', 'wishlist'].includes(statusFilter) ? statusFilter : 'garden';
     if (lightFilter !== 'all') document.getElementById('form-sunlight').value = lightFilter;
+    document.getElementById('form-planted-at').value = todayIsoDate();
     resetFormPhoto();
   }
 
@@ -304,7 +327,7 @@ function plantFormState() {
   const v = id => document.getElementById(id).value;
   return JSON.stringify({
     name: v('form-name'), status: v('form-status'), sunlight: v('form-sunlight'),
-    water: v('form-water'), soil: v('form-soil'), category: v('form-category'), notes: v('form-notes'),
+    water: v('form-water'), soil: v('form-soil'), category: v('form-category'), notes: v('form-notes'), planted_at: v('form-planted-at'),
     photo: formPhotoBlobs ? 'new' : (formPhotoRemove ? 'removed' : 'same')
   });
 }
@@ -363,6 +386,7 @@ async function handlePlantFormSubmit(e, skipDuplicateCheck = false) {
     died_in_bed: existing ? existing.died_in_bed || null : null,
     died_bed_sunlight: existing ? existing.died_bed_sunlight || null : null,
     died_at: existing ? existing.died_at || null : null,
+    planted_at: document.getElementById('form-planted-at').value || null,
     wished_by: existing ? existing.wished_by || null : null,
     photo_url: existing && !formPhotoRemove ? existing.photo_url || null : null,
     thumb_url: existing && !formPhotoRemove ? existing.thumb_url || null : null,
