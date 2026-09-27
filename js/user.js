@@ -41,7 +41,7 @@ function openDbSettings() {
 
 const USER_MODAL_IN_MS = 520;   // matches the CSS enter transition
 const USER_MODAL_OUT_MS = 380;  // matches the CSS exit transition
-const USER_MODAL_OVERLAP_MS = 140; // curtain starts moving while the modal is still fading
+const USER_MODAL_OVERLAP_MS = 220; // curtain starts moving while the modal is still fading
 
 const nextFrame = () => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
 const wait = ms => new Promise(r => setTimeout(r, ms));
