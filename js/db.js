@@ -323,8 +323,9 @@ function zonePayload(zone) {
     sunlight: zone.sunlight,
     x: zone.x,
     y: zone.y,
-    width: zone.width,
-    height: zone.height
+    // legacy beds may still carry w/h instead of width/height
+    width: zone.width ?? zone.w ?? 300,
+    height: zone.height ?? zone.h ?? 200
   };
 }
 
