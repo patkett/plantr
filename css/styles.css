@@ -162,3 +162,11 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 details.specimens > summary { list-style: none; }
 details.specimens > summary::-webkit-details-marker { display: none; }
 details.specimens[open] > summary svg { transform: rotate(180deg); }
+
+/* Directory: plant notes collapsed to 4 lines until "Mehr" is tapped */
+.notes-clamped {
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

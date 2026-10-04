@@ -309,6 +309,8 @@ function plantPayload(plant) {
     category: plant.category,
     status: plant.status,
     notes: plant.notes,
+    url: plant.url || null,
+    created_at: plant.created_at || null,
     emoji: plant.emoji,
     bed_id: plant.bed_id,
     x_pos: plant.x_pos,
