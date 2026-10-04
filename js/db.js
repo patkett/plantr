@@ -105,10 +105,17 @@ function disconnectSupabase() {
   });
 }
 
+// Browser-level network state (airplane mode, no Wi-Fi). Treated as a hard
+// "don't even try" signal so writes go straight to the outbox without a
+// failing request first.
+function isNetworkOnline() {
+  return typeof navigator === 'undefined' || navigator.onLine !== false;
+}
+
 // --- DATA FETCHING & SYNC ---
 async function fetchAllData() {
   let connected = false;
-  if (supabaseClient) {
+  if (supabaseClient && isNetworkOnline()) {
     // Push changes made while offline before pulling the shared state
     await flushOutbox();
     try {
@@ -123,6 +130,10 @@ async function fetchAllData() {
         plants = plantsData || [];
         if (!linksErr) { links = linksData || []; saveLinksLocal(); }
         else { links = loadLinksLocal(); reportSyncError(linksErr); }
+        // Local edits still waiting in the outbox win over the server copy
+        applyPendingOutbox();
+        savePlantsLocal();
+        saveZonesLocal();
         // Photos still waiting in the outbox are not on the server yet
         const pendingIds = new Set(getOutbox().filter(i => i.table === 'photos' && i.op === 'upload').map(i => i.id));
         plants.forEach(p => { if (pendingIds.has(p.id)) p.photo_pending = true; });
@@ -217,6 +228,22 @@ async function applyRemote(entry) {
   return supabaseClient.from(entry.table).upsert(entry.payload);
 }
 
+// Overlay queued (unsent) plant/bed/link changes onto freshly pulled data so
+// a pull-to-refresh never hides what was edited offline.
+function applyPendingOutbox() {
+  const lists = { plants: () => plants, garden_beds: () => zones, links: () => links };
+  getOutbox().forEach(entry => {
+    const getList = lists[entry.table];
+    if (!getList) return;
+    const list = getList();
+    const idx = list.findIndex(r => r.id === entry.id);
+    if (entry.op === 'delete') { if (idx >= 0) list.splice(idx, 1); return; }
+    if (!entry.payload) return;
+    if (idx >= 0) list[idx] = { ...list[idx], ...entry.payload };
+    else list.push({ ...entry.payload });
+  });
+}
+
 // Photo ops: { table: 'photos', op: 'upload' | 'delete', id: plantId }.
 // Upload reads the resized blobs from IndexedDB, pushes them to Storage and
 // then writes the resulting URLs onto the plant row.
@@ -257,7 +284,7 @@ function reportSyncError(error) {
 
 let flushingOutbox = false;
 async function flushOutbox() {
-  if (flushingOutbox || !supabaseClient) return 0;
+  if (flushingOutbox || !supabaseClient || !isNetworkOnline()) return 0;
   const items = getOutbox();
   if (items.length === 0) return 0;
   flushingOutbox = true;
@@ -283,7 +310,7 @@ async function flushOutbox() {
 
 // Try the write now; fall back to the outbox if Supabase isn't reachable.
 async function writeRemote(entry) {
-  if (isConnectedToSupabase && supabaseClient) {
+  if (isConnectedToSupabase && supabaseClient && isNetworkOnline()) {
     try {
       const { error } = await applyRemote(entry);
       if (!error) return true;
@@ -293,7 +320,7 @@ async function writeRemote(entry) {
     }
   }
   enqueueOutbox(entry);
-  updateDbStatusUI(isConnectedToSupabase);
+  updateDbStatusUI(isConnectedToSupabase && isNetworkOnline());
   return false;
 }
 

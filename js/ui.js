@@ -10,6 +10,13 @@ function showToast(message, icon = '🌿') {
   document.getElementById('toast-icon').innerText = icon;
   document.getElementById('toast-message').innerText = message;
 
+  // Warning toasts use the same amber palette as the offline banner
+  const warn = icon === '⚠️';
+  toast.classList.toggle('bg-amber-400', warn);
+  toast.classList.toggle('text-amber-950', warn);
+  toast.classList.toggle('bg-stone-900', !warn);
+  toast.classList.toggle('text-white', !warn);
+
   toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-2');
   toast.classList.add('opacity-100', 'translate-y-0');
 
