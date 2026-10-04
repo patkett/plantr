@@ -326,7 +326,6 @@ function setFormPhotoPreview(src, ownsBlobUrl = false) {
 function resetFormPhoto(plant = null) {
   formPhotoBlobs = null;
   formPhotoRemove = false;
-  document.getElementById('form-photo-camera').value = '';
   document.getElementById('form-photo-file').value = '';
   document.getElementById('form-photo-spinner').classList.add('hidden');
   setFormPhotoPreview(plant ? plantThumbSrc(plant) : null);
