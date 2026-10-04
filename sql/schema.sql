@@ -37,7 +37,8 @@ CREATE TABLE IF NOT EXISTS public.plants (
   planted_at DATE,
   placements JSONB DEFAULT '[]'::jsonb,
   deaths JSONB DEFAULT '[]'::jsonb,
-  wished_by TEXT
+  wished_by TEXT,
+  url TEXT
 );
 
 -- 2b. Migration for existing databases: add columns used to record
@@ -101,3 +102,7 @@ DROP POLICY IF EXISTS "Allow public read/write on garden_beds" ON public.garden_
 DROP POLICY IF EXISTS "Allow public read/write on plants" ON public.plants;
 CREATE POLICY "Allow public read/write on garden_beds" ON public.garden_beds FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow public read/write on plants" ON public.plants FOR ALL USING (true) WITH CHECK (true);
+
+-- 2i. Migration: optional web link per plant (e.g. NaturaDB page).
+ALTER TABLE public.plants ADD COLUMN IF NOT EXISTS url TEXT;
+NOTIFY pgrst, 'reload schema';

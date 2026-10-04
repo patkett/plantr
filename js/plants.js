@@ -171,7 +171,13 @@ function renderPlantList() {
           </span>
         </div>
 
-        ${plant.notes ? `<p class="text-xs text-stone-600 bg-stone-50 p-2.5 rounded-xl border border-stone-200/60 leading-relaxed">${plant.notes}</p>` : ''}
+        ${plant.notes ? `<div class="text-xs text-stone-600 bg-stone-50 p-2.5 rounded-xl border border-stone-200/60">
+          <p class="plant-notes notes-clamped leading-relaxed whitespace-pre-line">${escapeHtml(plant.notes)}</p>
+          <button type="button" onclick="toggleNotes(this)" class="notes-toggle hidden mt-1 text-[11px] font-semibold text-brand-700 hover:text-brand-800">Mehr</button>
+        </div>` : ''}
+        ${plant.url ? `<a href="${escapeHtml(plant.url)}" target="_blank" rel="noopener noreferrer" class="flex items-center gap-1.5 text-xs font-medium text-brand-700 hover:text-brand-800 min-w-0">
+          <i data-lucide="link" class="w-3.5 h-3.5 shrink-0"></i><span class="truncate">${escapeHtml(linkHost(plant.url))}</span><i data-lucide="external-link" class="w-3 h-3 shrink-0 text-stone-400"></i>
+        </a>` : ''}
         ${specimensHtml}
         ${isDeceased ? `<p class="text-xs text-stone-600 bg-stone-100 p-2.5 rounded-xl border border-stone-200 leading-relaxed">🪦 Verstorben${plant.died_in_bed ? ` im Beet <strong>${plant.died_in_bed}</strong>` : ''}${plant.died_bed_sunlight ? ` (${t(plant.died_bed_sunlight)})` : ''}${fmtSpan(deaths.length ? deaths[deaths.length - 1].planted_at : null, plant.died_at)}${deaths.length > 1 ? `<br><span class="text-stone-500">Frühere Exemplare: ${deaths.slice(0, -1).map(fmtDeath).join('; ')}</span>` : ''}</p>` : ''}
         ${historyHtml}
@@ -200,6 +206,9 @@ function renderPlantList() {
     `;
   };
 
+  // Newest entries first (created_at from Supabase; fallback: timestamp in the id "p_<ms>")
+  const createdKey = p => p.created_at ? Date.parse(p.created_at) || 0 : (Number(String(p.id).replace(/^p_/, '')) || 0);
+  filtered.sort((a, b) => createdKey(b) - createdKey(a));
   const living = filtered.filter(p => p.status !== 'deceased');
   const deceased = filtered.filter(p => p.status === 'deceased');
   let html = living.map(renderCard).join('');
@@ -212,6 +221,16 @@ function renderPlantList() {
   container.innerHTML = html;
 
   lucide.createIcons();
+  // Only offer "Mehr" when the notes really exceed the 4-line clamp
+  container.querySelectorAll('.plant-notes').forEach(p => {
+    if (p.scrollHeight > p.clientHeight + 1) p.nextElementSibling.classList.remove('hidden');
+  });
+}
+
+function toggleNotes(btn) {
+  const p = btn.previousElementSibling;
+  const expanded = p.classList.toggle('notes-clamped');
+  btn.textContent = expanded ? 'Mehr' : 'Weniger';
 }
 
 // Records the death of one specimen (bed + light conditions + date) and
@@ -354,6 +373,7 @@ function openPlantModal(plantId = null) {
     document.getElementById('form-soil').value = plant.soil || 'Well-Drained';
     document.getElementById('form-category').value = plant.category || 'Perennial';
     document.getElementById('form-notes').value = plant.notes || '';
+    document.getElementById('form-url').value = plant.url || '';
     document.getElementById('btn-modal-delete-plant').classList.remove('hidden');
     resetFormPhoto(plant);
   } else {
@@ -379,7 +399,7 @@ function plantFormState() {
   const v = id => document.getElementById(id).value;
   return JSON.stringify({
     name: v('form-name'), status: v('form-status'), sunlight: v('form-sunlight'),
-    water: v('form-water'), soil: v('form-soil'), category: v('form-category'), notes: v('form-notes'),
+    water: v('form-water'), soil: v('form-soil'), category: v('form-category'), notes: v('form-notes'), url: v('form-url'),
     photo: formPhotoBlobs ? 'new' : (formPhotoRemove ? 'removed' : 'same')
   });
 }
@@ -422,8 +442,17 @@ async function handlePlantFormSubmit(e, skipDuplicateCheck = false) {
     }
   }
 
+  const rawUrl = document.getElementById('form-url').value.trim();
+  const url = rawUrl ? normalizeLinkUrl(rawUrl) : null;
+  if (rawUrl && !url) {
+    showToast('Bitte eine gültige Web-Adresse eingeben', '⚠️');
+    document.getElementById('form-url').focus();
+    return;
+  }
+
   const plantData = {
     id: id || 'p_' + Date.now(),
+    created_at: existing ? existing.created_at || null : new Date().toISOString(),
     name: document.getElementById('form-name').value,
     botanical_name: existing ? (existing.botanical_name || null) : null,
     emoji: existing ? existing.emoji || null : null,
@@ -433,6 +462,7 @@ async function handlePlantFormSubmit(e, skipDuplicateCheck = false) {
     soil: document.getElementById('form-soil').value,
     category: document.getElementById('form-category').value,
     notes: document.getElementById('form-notes').value,
+    url,
     placements: existing ? [...(existing.placements || [])] : [],
     deaths: existing ? [...(existing.deaths || [])] : [],
     died_in_bed: existing ? existing.died_in_bed || null : null,
