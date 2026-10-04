@@ -1,33 +1,4 @@
-// --- SHARED UI UTILITIES: TOASTS, CONFIRM DIALOG, SQL COPY ---
-
-function copySqlScript() {
-  const scriptText = cachedSqlScript || document.getElementById('sql-script-text').innerText;
-
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(scriptText).then(() => {
-      showToast("SQL-Setup-Skript in die Zwischenablage kopiert!", "📋");
-    }).catch(() => {
-      fallbackCopyText(scriptText);
-    });
-  } else {
-    fallbackCopyText(scriptText);
-  }
-}
-
-function fallbackCopyText(text) {
-  const textarea = document.createElement('textarea');
-  textarea.value = text;
-  textarea.style.position = 'fixed';
-  document.body.appendChild(textarea);
-  textarea.select();
-  try {
-    document.execCommand('copy');
-    showToast("SQL-Setup-Skript in die Zwischenablage kopiert!", "📋");
-  } catch (err) {
-    showToast("Automatisches Kopieren nicht möglich", "⚠️");
-  }
-  document.body.removeChild(textarea);
-}
+// --- SHARED UI UTILITIES: TOASTS, CONFIRM DIALOG ---
 
 let toastTimeout = null;
 function escapeHtml(text) {
