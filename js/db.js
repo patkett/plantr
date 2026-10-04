@@ -61,7 +61,6 @@ function updateDbStatusUI(connected) {
     badge.className = "px-2.5 py-1 bg-amber-100 text-amber-800 border border-amber-200 text-[10px] font-bold rounded-full";
     badge.innerText = "Nur lokaler Speicher";
   }
-  updateOutboxStatusUI();
 }
 
 async function handleSaveDbSettings(e) {
@@ -377,92 +376,4 @@ async function syncSaveZone(zone) {
 async function syncDeleteZone(zoneId) {
   saveZonesLocal();
   await writeRemote({ op: 'delete', table: 'garden_beds', id: zoneId });
-}
-
-// --- MANUAL SYNC TOOLS (Supabase settings view) ---
-// The schema itself lives in sql/schema.sql and is already applied in the
-// project; the settings view only exposes runtime sync controls.
-
-const OUTBOX_TABLE_LABELS = { plants: 'Pflanze', garden_beds: 'Beet', links: 'Link', photos: 'Foto' };
-const OUTBOX_OP_LABELS = { delete: 'löschen', upload: 'hochladen', upsert: 'speichern' };
-
-function describeOutboxEntry(entry) {
-  const table = OUTBOX_TABLE_LABELS[entry.table] || entry.table;
-  const op = OUTBOX_OP_LABELS[entry.op] || OUTBOX_OP_LABELS.upsert;
-  let name = '';
-  if (entry.table === 'plants' || entry.table === 'photos') {
-    const p = plants.find(x => x.id === entry.id);
-    name = p ? p.name : (entry.payload && entry.payload.name) || '';
-  } else if (entry.table === 'garden_beds') {
-    const z = zones.find(x => x.id === entry.id);
-    name = z ? z.name : (entry.payload && entry.payload.name) || '';
-  } else if (entry.table === 'links') {
-    name = (entry.payload && (entry.payload.title || entry.payload.url)) || '';
-  }
-  return `${table}${name ? ` „${name}“` : ''} ${op}`;
-}
-
-function updateOutboxStatusUI() {
-  const status = document.getElementById('outbox-status');
-  const list = document.getElementById('outbox-list');
-  if (!status || !list) return;
-  const items = getOutbox();
-  if (items.length === 0) {
-    status.textContent = isConnectedToSupabase
-      ? 'Alles synchronisiert. Keine ausstehenden Änderungen.'
-      : 'Keine ausstehenden Änderungen. Nicht mit Supabase verbunden.';
-    list.classList.add('hidden');
-    list.innerHTML = '';
-    return;
-  }
-  status.textContent = `${items.length} ausstehende Änderung${items.length === 1 ? '' : 'en'} in der Warteschlange:`;
-  list.innerHTML = items.map(e => {
-    const when = e.queued_at ? new Date(e.queued_at).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' }) : '';
-    return `<div class="flex items-center justify-between text-[11px] bg-stone-50 border border-stone-200 rounded-lg px-2.5 py-1.5">
-      <span class="text-stone-700 truncate">${escapeHtml(describeOutboxEntry(e))}</span>
-      <span class="text-stone-400 shrink-0 ml-2">${escapeHtml(when)}</span>
-    </div>`;
-  }).join('');
-  list.classList.remove('hidden');
-}
-
-async function syncNow() {
-  if (!supabaseClient) { showToast('Nicht mit Supabase verbunden', '⚠️'); return; }
-  const connected = await testSupabaseConnection();
-  updateDbStatusUI(connected);
-  if (!connected) { showToast('Supabase nicht erreichbar', '⚠️'); return; }
-  const pending = getOutbox().length;
-  const synced = await flushOutbox();
-  await fetchAllData();
-  renderPlantList();
-  renderMap();
-  updateDbStatusUI(isConnectedToSupabase);
-  lucide.createIcons();
-  if (pending === 0) showToast('Alles synchron', '☁️');
-  else if (synced < pending) showToast(`${pending - synced} Änderung${pending - synced === 1 ? '' : 'en'} konnte${pending - synced === 1 ? '' : 'n'} nicht synchronisiert werden`, '⚠️');
-}
-
-async function reloadFromCloud() {
-  if (!supabaseClient) { showToast('Nicht mit Supabase verbunden', '⚠️'); return; }
-  await fetchAllData();
-  renderPlantList();
-  renderMap();
-  updateDbStatusUI(isConnectedToSupabase);
-  lucide.createIcons();
-  showToast(isConnectedToSupabase ? 'Daten aus Supabase neu geladen' : 'Supabase nicht erreichbar – lokale Daten', '🔄');
-}
-
-function clearOutbox() {
-  const count = getOutbox().length;
-  if (count === 0) { showToast('Warteschlange ist bereits leer', '✅'); return; }
-  showConfirmDialog(
-    'Warteschlange leeren?',
-    `${count} ausstehende Änderung${count === 1 ? '' : 'en'} wird verworfen und nicht nach Supabase übertragen. Lokale Daten bleiben erhalten.`,
-    () => {
-      setOutbox([]);
-      updateDbStatusUI(isConnectedToSupabase);
-      showToast('Warteschlange geleert', '🗑️');
-    },
-    'Leeren'
-  );
 }
