@@ -8,7 +8,14 @@ window.addEventListener('DOMContentLoaded', async () => {
   initMapInteractions();
   initPullToRefresh();
   // Replay queued offline changes as soon as the network is back
-  window.addEventListener('online', () => { if (supabaseClient) refreshData(); });
+  window.addEventListener('online', () => {
+    if (supabaseClient) { showToast("Wieder online – synchronisiere …", "☁️"); refreshData(); }
+  });
+  // Flip to local mode immediately (airplane mode, lost Wi-Fi)
+  window.addEventListener('offline', () => {
+    updateDbStatusUI(false);
+    showToast("Offline – Änderungen werden lokal gespeichert", "⚠️");
+  });
   lucide.createIcons();
   showUserSelect({ instant: true });
 });
@@ -19,7 +26,14 @@ async function refreshData() {
   renderPlantList();
   renderMap();
   lucide.createIcons();
-  showToast(isConnectedToSupabase ? "Aktualisiert" : "Aktualisiert (lokal)", "🔄");
+  if (isConnectedToSupabase) { showToast("Aktualisiert", "🔄"); return; }
+  const pending = getOutbox().length;
+  showToast(
+    pending > 0
+      ? `Offline – ${pending} Änderung${pending === 1 ? '' : 'en'} ${pending === 1 ? 'wartet' : 'warten'} auf Sync`
+      : "Offline – nur lokaler Speicher",
+    "⚠️"
+  );
 }
 
 function initPullToRefresh() {
